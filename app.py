@@ -38,7 +38,7 @@ except Exception as e:
     st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN GENERADORA DE PDF (CORRECCIÓN DE FIRMAS APLICADA)
+# 3. FUNCIÓN GENERADORA DE PDF (CORRECCIÓN rfind APLICADA)
 def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -73,11 +73,10 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
     clausulas = ["1. Sistema probado a conformidad.", "2. Exclusión por fallas de Internet/Luz.", "3. Garantía de 1 año."]
     for c in clausulas: pdf.cell(0, 4, c, ln=True)
 
-    # CORRECCIÓN DE ERROR DE FIRMAS: Conversión a bytes para evitar errores de objeto Image
+    # CORRECCIÓN DE ERROR DE FIRMAS: Se añade el parámetro 'PNG' al final de pdf.image
     if firma_cli_data is not None and firma_prov_data is not None:
         y_firma = pdf.get_y() + 15
         
-        # Convertir arreglos a imágenes PIL y luego a flujos de bytes PNG
         def procesar_firma(data):
             img = Image.fromarray(data.astype('uint8'), 'RGBA')
             buffer = io.BytesIO()
@@ -88,8 +87,9 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
         f_cli_buf = procesar_firma(firma_cli_data)
         f_prov_buf = procesar_firma(firma_prov_data)
         
-        pdf.image(f_cli_buf, 20, y_firma, 50, 25)
-        pdf.image(f_prov_buf, 120, y_firma, 50, 25)
+        # EL CAMBIO CLAVE: Especificar el tipo de imagen explícitamente como 'PNG'
+        pdf.image(f_cli_buf, 20, y_firma, 50, 25, type='PNG')
+        pdf.image(f_prov_buf, 120, y_firma, 50, 25, type='PNG')
         
         pdf.set_y(y_firma + 25); pdf.set_font('Arial', 'B', 9)
         pdf.cell(95, 7, 'FIRMA CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, 'IVAN ORTIZ (IO SECURITY)', 0, 1, 'C')
@@ -140,11 +140,7 @@ with st.container():
             extra_aplicado = extra_por_unidad if prod in mats_para_ganancia else 0
             subtotal = (precio_base + extra_aplicado) * cant
             
-            items_pdf.append({
-                "Cantidad": cant, 
-                "Concepto": prod, 
-                "Subtotal_Final": subtotal
-            })
+            items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": subtotal})
             total_final += subtotal
             
     st.divider()
