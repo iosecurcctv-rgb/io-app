@@ -21,6 +21,8 @@ st.markdown("""
     .stButton>button:hover { background-color: #50C878; color: #111418; box-shadow: 0 0 10px #50C878; }
     .whatsapp-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white !important; background-color: #2E7D32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; }
     .download-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white !important; background-color: #374151; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; border: 1px solid #4B5563; }
+    /* Estilo para el expansor de cantidades */
+    .streamlit-expanderHeader { background-color: #1F2937 !important; color: #50C878 !important; border: 1px solid #50C878; border-radius: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -40,7 +42,7 @@ except Exception as e:
     st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN GENERADORA DE PDF (CONTRATO DETALLADO)
+# 3. FUNCIÓN GENERADORA DE PDF (CONTRATO DETALLADO COMPLETO)
 def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -84,7 +86,7 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
     pdf.cell(50, 8, f"$ {total:,.2f} ", 1, 1, 'R')
     pdf.ln(4)
 
-    # Cláusulas Detalladas
+    # Cláusulas Detalladas (Copia fiel del requerimiento)
     pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEGUNDA: VIGENCIA Y COSTO DEL SERVICIO", ln=True)
     pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"El costo total es de ${total:,.2f} MXN. La fecha programada de instalacion es {fecha_p.strftime('%d/%m/%Y')}.")
     
@@ -98,12 +100,12 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
     pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por: 1) Manipulacion por personal ajeno a IO SECURITY. 2) Daños Electricos: Fallas por sobrecargas o variaciones de voltaje. 3) Daño Fisico: Golpes o caidas. 4) Mal Uso. 5) Desastres Naturales o Vandalismo. 6) Problemas de Red: Fallas derivadas del internet del cliente.")
 
     pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEXTA: COSTOS ADICIONALES", ln=True)
-    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Visitas técnicas que no esten cubiertas por la garantia tendran un costo de $250.00 MXN, cubiertos al momento de la visita.")
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Visitas tecnicas que no esten cubiertas por la garantia (Clausula Tercera) tendran un costo de $250.00 MXN, cubiertos al momento de la visita.")
 
     pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEPTIMA: JURISDICCION", ln=True)
-    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Las partes se someten a la jurisdiccion de los tribunales de Mineral de la Reforma, Hidalgo.")
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Para la interpretacion, las partes se someten a los tribunales de Mineral de la Reforma, Hidalgo.")
 
-    # Fecha automática final
+    # Fecha automática final corregida
     pdf.ln(4)
     hoy = datetime.now()
     meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -152,34 +154,34 @@ with st.container():
     total_final = 0.0
     
     if mats_seleccionados:
-        st.markdown("### 🔢 Especificar Cantidades")
-        temp_data = {}
-        total_unidades_para_ganancia = 0
-        
-        for prod in mats_seleccionados:
-            col_q, col_p = st.columns([1, 4])
-            with col_q:
-                cant = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
-            with col_p:
-                st.write(f"📦 **{prod}**")
+        # SECCIÓN DESPLEGABLE (Para ocultar después de poner cantidades)
+        with st.expander("🔢 ESPECIFICAR CANTIDADES (Abrir/Cerrar)", expanded=True):
+            temp_data = {}
+            total_unidades_para_ganancia = 0
             
-            temp_data[prod] = cant
-            if prod in mats_para_ganancia:
-                total_unidades_para_ganancia += cant
-        
-        extra_por_unit = mano_obra_interna / total_unidades_para_ganancia if total_unidades_para_ganancia > 0 else 0
-        
-        for prod, cant in temp_data.items():
-            precio_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
-            extra_a = extra_por_unit if prod in mats_para_ganancia else 0
-            subtotal = (precio_base + extra_a) * cant
+            for prod in mats_seleccionados:
+                col_q, col_p = st.columns([1, 4])
+                with col_q:
+                    cant = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
+                with col_p:
+                    st.write(f"📦 **{prod}**")
+                
+                temp_data[prod] = cant
+                if prod in mats_para_ganancia:
+                    total_unidades_para_ganancia += cant
             
-            items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": subtotal})
-            total_final += subtotal
+            extra_por_unit = mano_obra_interna / total_unidades_para_ganancia if total_unidades_para_ganancia > 0 else 0
+            
+            for prod, cant in temp_data.items():
+                precio_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
+                extra_a = extra_por_unit if prod in mats_para_ganancia else 0
+                subtotal = (precio_base + extra_a) * cant
+                items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": subtotal})
+                total_final += subtotal
             
     st.divider()
     st.metric("TOTAL PARA EL CLIENTE", f"${total_final:,.2f}")
-    obs = st.text_area("Observaciones adicionales")
+    obs = st.text_area("Observaciones adicionales / Dirección de Instalación")
 
 st.markdown("### ✍️ Firmas Digitales")
 f1, f2 = st.columns(2)
