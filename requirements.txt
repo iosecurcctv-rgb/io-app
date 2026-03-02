@@ -1,6 +1,6 @@
-streamlit==1.31.0
-streamlit-gsheets-connection==0.0.3
-streamlit-drawable-canvas==0.9.3
-fpdf==1.7.2
-pandas==2.1.4
-Pillow==10.2.0
+streamlit
+st-gsheets-connection
+streamlit-drawable-canvas
+fpdf
+pandas
+Pillow
