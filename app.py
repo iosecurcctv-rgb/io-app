@@ -13,16 +13,16 @@ import os
 # 1. CONFIGURACIÓN E IDENTIDAD VISUAL (FORZADO TÉCNICO DE ICONO)
 st.set_page_config(
     page_title="IO SECURITY - Control Maestro", 
-    page_icon="logo.png", # Icono de pestaña
+    page_icon="logo.png", 
     layout="wide"
 )
 
-# Inyectar metadatos para que el celular reconozca el logo.png como icono de app oficial (?v=2)
+# Inyectar metadatos para que el celular reconozca el logo.png como icono oficial (?v=3)
 st.markdown("""
     <head>
-        <link rel="apple-touch-icon" href="logo.png?v=2">
-        <link rel="icon" type="image/png" href="logo.png?v=2">
-        <link rel="shortcut icon" href="logo.png?v=2">
+        <link rel="apple-touch-icon" href="logo.png?v=3">
+        <link rel="icon" type="image/png" href="logo.png?v=3">
+        <link rel="shortcut icon" href="logo.png?v=3">
     </head>
     <style>
     .stApp { background-color: #111418; color: #D1D5DB; }
@@ -70,15 +70,12 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     pdf.ln(18)
 
     pdf.set_font('Arial', 'B', 11); pdf.cell(0, 7, tit_doc, ln=True, align='C')
-    pdf.ln(4)
-    pdf.set_font('Arial', '', 9)
+    pdf.ln(4); pdf.set_font('Arial', '', 9)
     pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, IO SECURITY ('EL PRESTADOR'), y por la otra, {cliente} ('EL CLIENTE').")
     pdf.ln(2)
 
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
-    pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True)
-    pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True)
-    pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
+    pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True); pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
     
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
     for item in items_finales:
@@ -116,7 +113,6 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
 # 4. LÓGICA DE LA APP
 st.sidebar.title("🛡️ PANEL IO SECURITY")
 tipo_servicio = st.sidebar.radio("Tipo de Servicio:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"])
-
 sub_mant = "Preventivo"
 if tipo_servicio == "Mantenimiento":
     sub_mant = st.sidebar.selectbox("Tipo de Mantenimiento:", ["Preventivo", "Correctivo"])
@@ -131,7 +127,8 @@ with st.container():
         f_p = st.date_input("Fecha Programada", value=datetime.now() + timedelta(days=1))
     with c2:
         mats_seleccionados = st.multiselect("Materiales extra del catálogo:", df_catalogo['Producto'].tolist())
-        mano_obra_manual = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=0)
+        # CORRECCIÓN DE VARIABLE: Aseguramos que se llame mano_obra_total en todo el script
+        mano_obra_total = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=0)
 
     items_pdf = []; total_final = 0.0
 
@@ -139,8 +136,8 @@ with st.container():
         with st.expander("🛠️ CONFIGURACIÓN TÉCNICA MANTENIMIENTO", expanded=True):
             m1, m2 = st.columns(2)
             with m1:
-                c_mant = st.number_input("Cámaras a mantener", min_value=0, value=0)
-                p_mant_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
+                c_cam = st.number_input("Cámaras a mantener", min_value=0, value=0)
+                p_cam_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
                 c_bal = st.number_input("Baluns a reemplazar", min_value=0, value=0)
                 p_bal_base = st.number_input("Costo por par $", min_value=0, value=120)
             with m2:
@@ -148,29 +145,25 @@ with st.container():
                 costos_dvr = {"Ninguna": 0, "DVR 4 Canales": 250, "DVR 8 Canales": 350, "DVR 16 Canales": 450, "Placa Madre": 600}
                 p_dvr_base = st.number_input("Costo Limpieza DVR $", value=costos_dvr[sel_dvr])
 
-            serv_activos = (1 if c_mant > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
+            serv_activos = (1 if c_cam > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
             extra_por_concepto = round(mano_obra_total / serv_activos, 2) if serv_activos > 0 else 0
 
-            if c_mant > 0:
-                p_final = round((c_mant * p_mant_base) + extra_por_concepto, 2)
-                items_pdf.append({"Cantidad": c_mant, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": p_final})
-                total_final += p_final
+            if c_cam > 0:
+                sub = round((c_cam * p_cam_base) + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": c_cam, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": sub}); total_final += sub
             if c_bal > 0:
-                p_final = round((c_bal * p_bal_base) + extra_por_concepto, 2)
-                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": p_final})
-                total_final += p_final
+                sub = round((c_bal * p_bal_base) + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": sub}); total_final += sub
             if p_dvr_base > 0:
-                p_final = round(p_dvr_base + extra_por_concepto, 2)
-                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": p_final})
-                total_final += p_final
+                sub = round(p_dvr_base + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": sub}); total_final += sub
 
     if mats_seleccionados:
         with st.expander("📦 CANTIDADES DE MATERIALES", expanded=True):
             temp_data = {}; total_unidades_ganancia = 0
             for prod in mats_seleccionados:
                 col_q, col_p = st.columns([1, 4])
-                with col_q: q = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
-                with col_p: st.write(f"📦 **{prod}**")
+                with col_q: q = st.number_input(f"Cant. {prod}", min_value=1, value=1, key=f"q_{prod}")
                 temp_data[prod] = q
                 total_unidades_ganancia += q
             
@@ -179,8 +172,7 @@ with st.container():
             for prod, q in temp_data.items():
                 p_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
                 sub = round((p_base + extra_unit_ins) * q, 2)
-                items_pdf.append({"Cantidad": q, "Concepto": prod, "Subtotal_Final": sub})
-                total_final += sub
+                items_pdf.append({"Cantidad": q, "Concepto": prod, "Subtotal_Final": sub}); total_final += sub
             
     st.divider()
     total_final = round(total_final, 2)
@@ -189,12 +181,8 @@ with st.container():
 
 st.markdown("### ✍️ Panel de Firmas (Usa la Papelera para borrar)")
 f1, f2 = st.columns(2)
-with f1: 
-    canv_cli = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="cli", drawing_mode="freedraw", display_toolbar=True)
-    st.caption("Firma del Cliente")
-with f2: 
-    canv_prov = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="prov", drawing_mode="freedraw", display_toolbar=True)
-    st.caption("Firma de Iván Ortiz")
+with f1: canv_cli = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="cli", drawing_mode="freedraw", display_toolbar=True)
+with f2: canv_prov = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="prov", drawing_mode="freedraw", display_toolbar=True)
 
 if st.button("🚀 GENERAR CONTRATO"):
     if canv_cli.image_data is not None and nom and tel:
@@ -202,8 +190,7 @@ if st.button("🚀 GENERAR CONTRATO"):
             pdf_bytes = generar_pdf_io(nom, items_pdf, total_final, tipo_servicio, sub_mant, canv_cli.image_data, canv_prov.image_data, f_p, obs)
             b64 = base64.b64encode(pdf_bytes).decode()
             st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">📥 Descargar Contrato PDF</a>', unsafe_allow_html=True)
-            
-            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio} ({sub_mant if tipo_servicio=='Mantenimiento' else ''}). Saludos."
+            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio}. Saludos."
             url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 Compartir por WhatsApp</a>', unsafe_allow_html=True)
             st.success("✅ Documento generado.")
