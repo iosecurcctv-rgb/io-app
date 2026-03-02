@@ -62,7 +62,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     pdf.ln(32) 
 
     if tipo == "Servicio IO Prevent":
-        # CONTRATO IO PREVENT (SE MANTIENE EL QUE CORREGIMOS ANTERIORMENTE)
+        # CONTRATO IO PREVENT
         pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE PRESTACION DE SERVICIO: "IO PREVENT"', ln=True, align='C')
         pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f"FECHA: {hoy.day} de {meses_txt[hoy.month-1]} del {hoy.year} LUGAR: Pachuca de Soto/Hidalgo.", ln=True, align='R'); pdf.ln(5)
         pdf.set_font('Arial', 'B', 10); pdf.cell(0, 7, "REUNIDOS", ln=True); pdf.set_font('Arial', '', 10)
@@ -83,13 +83,18 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.multi_cell(0, 4.5, f"La duracion de este contrato es de un (1) año a partir de la firma. \nFecha de Inicio: {f_ini.strftime('%d/%m/%Y')} \nFecha de Termino: {f_t.strftime('%d/%m/%Y')}"); pdf.ln(1)
         
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "TERCERA: ALCANCE TECNICO LIMITADO", ln=True); pdf.set_font('Arial', '', 9)
-        pdf.multi_cell(0, 4.5, "Verificacion de Grabacion mensual y Soporte de Aplicacion Movil."); pdf.ln(1)
+        pdf.multi_cell(0, 4.5, "Verificacion de Grabacion mensual y Soporte de Aplicacion Movil (Hasta 4 dispositivos)."); pdf.ln(1)
         
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CUARTA: EXCLUSIONES", ln=True); pdf.set_font('Arial', '', 9)
         pdf.multi_cell(0, 4.5, "No incluye visitas fisicas ni refacciones. Visita fisica de emergencia: $200.00 MXN."); pdf.ln(1)
         
+        # MODIFICACIÓN IO PREVENT: CÁLCULO DE PAGOS SEMESTRALES O ANUALES
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "SEPTIMA: HONORARIOS", ln=True); pdf.set_font('Arial', 'B', 10)
-        pdf.cell(0, 7, f"El costo total por el servicio con pago {periodo.lower()} es de ${total:,.2f} MXN.", ln=True)
+        if periodo == "Semestral":
+            pago_dividido = total / 2
+            pdf.cell(0, 7, f"El costo total es de ${total:,.2f} MXN, cubierto en dos pagos semestrales de ${pago_dividido:,.2f} MXN.", ln=True)
+        else:
+            pdf.cell(0, 7, f"El costo total es de ${total:,.2f} MXN, cubierto en un pago anual de ${total:,.2f} MXN.", ln=True)
 
     else:
         # CONTRATO INSTALACIÓN / MANTENIMIENTO CON TEXTO EXACTO DE IVÁN
@@ -105,7 +110,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.multi_cell(0, 5, f"EL PRESTADOR se compromete a instalar y poner en funcionamiento un sistema de camaras de seguridad (CCTV) en el domicilio de EL CLIENTE, ubicado en {dom}. Los equipos a instalar y los servicios a realizar se detallan en el Anexo 1, que forma parte integral de este contrato.")
         pdf.ln(2)
 
-        # TABLA DEFINIDA COMO ANEXO 1
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "ANEXO 1", ln=True)
         pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
         pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion', 1, 0, 'L', True); pdf.cell(50, 8, 'Total', 1, 1, 'C', True)
@@ -187,10 +191,11 @@ with st.container():
     elif tipo == "Mantenimiento":
         with st.expander("🛠️ CONFIGURACIÓN MANTENIMIENTO", expanded=True):
             col1, col2 = st.columns(2)
-            c_m = col1.number_input("Cámaras", 0); p_m = col1.number_input("Precio Mant unitario $", 150)
-            c_b = col1.number_input("Pares Baluns", 0); p_b = col1.number_input("Precio Par $", 120)
+            # MODIFICACIÓN: PRECIOS PREDETERMINADOS REMOVIDOS (value=0.0)
+            c_m = col1.number_input("Cámaras", 0); p_m = col1.number_input("Precio Mant unitario $", min_value=0.0, value=0.0)
+            c_b = col1.number_input("Pares Baluns", 0); p_b = col1.number_input("Precio Par $", min_value=0.0, value=0.0)
             sel_d = col2.selectbox("Tipo DVR", ["4 Can", "8 Can", "16 Can", "Placa Madre"])
-            p_d_mnt = col2.number_input(f"Costo Limpieza {sel_d} $", value={"4 Can": 250, "8 Can": 350, "16 Can": 450, "Placa Madre": 600}[sel_d])
+            p_d_mnt = col2.number_input(f"Costo Limpieza {sel_d} $", min_value=0.0, value=0.0)
             
             opc_mnt = []
             if c_m > 0: opc_mnt.append(f"Mantenimiento {c_m} Cam")
@@ -236,5 +241,5 @@ if st.button("🚀 FINALIZAR Y GENERAR EXPEDIENTE"):
             st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
             msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmo la generacion de su contrato. Adjunto PDF.")
             st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
-        except Exception as e: st.error(f"ERROR: {e}")
+        except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
     else: st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")
