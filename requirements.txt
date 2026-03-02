@@ -1,6 +1,6 @@
 streamlit
-st-gsheets-connection
+streamlit-gsheets-connection
 streamlit-drawable-canvas
 fpdf
-Pillow
 pandas
+Pillow
