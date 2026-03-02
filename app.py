@@ -20,6 +20,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# MOSTRAR LOGO EN LA PÁGINA PRINCIPAL
+try:
+    st.image('logo.png', width=200)
+except:
+    st.title("🛡️ IO SECURITY")
+
 # 2. CONEXIÓN BLINDADA (Usando tu URL de publicación CSV)
 URL_CATALOGO_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9udZI738JSGiUljkyW02hc3gtcjoN869W3duYOR6VInie_fNvC5kXoByTrCm/pub?gid=596039047&single=true&output=csv"
 
