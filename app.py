@@ -40,24 +40,22 @@ try:
     df_catalogo = pd.read_csv(URL_CSV); df_catalogo.columns = df_catalogo.columns.str.strip() 
 except: st.error("⚠️ ERROR DE RED"); st.stop()
 
-# 3. GENERADOR DE PDF (NOMBRE COMPLETO + FECHA SUPERIOR)
+# 3. GENERADOR DE PDF
 def generar_pdf_io(cliente, items, total, tipo, f_cli, f_prov, f_p, domicilio, notas):
     pdf = FPDF()
     pdf.add_page()
-    
     hoy = datetime.now()
     meses_txt = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     empresa_full = "IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD"
 
-    # FECHA SUPERIOR
+    # FECHA SUPERIOR DERECHA
     pdf.set_font('Arial', '', 10)
     pdf.cell(0, 5, f"Fecha de Emision: {hoy.day} de {meses_txt[hoy.month-1]} de {hoy.year}", ln=True, align='R')
     pdf.ln(5)
 
-    # Logo
+    # Logo sin encimarse
     try: pdf.image('logo.png', 10, 15, 35)
     except: pass
-    
     pdf.ln(25) 
     
     pdf.set_font('Arial', 'B', 12)
@@ -68,13 +66,12 @@ def generar_pdf_io(cliente, items, total, tipo, f_cli, f_prov, f_p, domicilio, n
     pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, {empresa_full}, en adelante 'EL PRESTADOR', y por la otra, {cliente}, en adelante 'EL CLIENTE'.")
     pdf.ln(3)
 
-    # CLÁUSULA PRIMERA: DOMICILIO DINÁMICO
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA PRIMERA: OBJETO DEL CONTRATO", ln=True)
     pdf.set_font('Arial', '', 10)
     pdf.multi_cell(0, 5, f"EL PRESTADOR se compromete a instalar y poner en funcionamiento un sistema de camaras de seguridad (CCTV) en el domicilio de EL CLIENTE, ubicado en {domicilio}. Los equipos se detallan a continuacion:")
     pdf.ln(2)
 
-    # Tabla de Equipos
+    # Tabla
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
     pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True); pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 10)
@@ -89,30 +86,23 @@ def generar_pdf_io(cliente, items, total, tipo, f_cli, f_prov, f_p, domicilio, n
 
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA TERCERA: GARANTIAS", ln=True)
     pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, "- Garantia de Equipos: Se otorga una garantia de 8 meses a partir de la fecha de instalacion.\n- Garantia de Mano de Obra: Se ofrece una garantia de 4 meses a partir de la fecha de instalacion.")
-    pdf.ln(3)
-
-    pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA CUARTA: PROCESO PARA HACER VALIDA LA GARANTIA", ln=True)
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, "Notificar fallas al 7711648186. IO SECURITY programara una visita tecnica en maximo 72 horas habiles.")
+    pdf.multi_cell(0, 5, "- Garantia de Equipos: 8 meses.\n- Garantia de Mano de Obra: 4 meses.")
     pdf.ln(3)
 
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA QUINTA: ANULACION DE LA GARANTIA", ln=True)
     pdf.set_font('Arial', '', 9)
-    pdf.multi_cell(0, 4.5, "La garantia se anula por: Manipulacion de terceros, Daños Electricos (sobrecargas), Daño Fisico (golpes), Mal Uso, Desastres Naturales o Problemas de Red externos.")
+    pdf.multi_cell(0, 4.5, "Anulacion por: Manipulacion de terceros, Daños Electricos, Daño Fisico, Mal Uso o Problemas de Red.")
     pdf.ln(3)
 
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA SEXTA: COSTOS ADICIONALES", ln=True)
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, "Visitas tecnicas fuera de garantia tendran un costo de $250.00 MXN.")
+    pdf.set_font('Arial', '', 10); pdf.multi_cell(0, 5, "Visitas tecnicas fuera de garantia: $250.00 MXN.")
     
     if notas:
         pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "ANEXO: NOTAS ADICIONALES", ln=True)
         pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4.5, notas)
 
     pdf.ln(6)
-    txt_f = f"Ambas partes firmamos de conformidad en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses_txt[hoy.month-1]} del año {hoy.year}."
-    pdf.set_font('Arial', 'I', 10); pdf.multi_cell(0, 5, txt_f)
+    pdf.set_font('Arial', 'I', 10); pdf.multi_cell(0, 5, f"Firmado en Mineral de la Reforma, a los {hoy.day} dias de {meses_txt[hoy.month-1]} de {hoy.year}.")
 
     if f_cli is not None:
         y_f = pdf.get_y() + 8
@@ -120,32 +110,28 @@ def generar_pdf_io(cliente, items, total, tipo, f_cli, f_prov, f_p, domicilio, n
             img = Image.fromarray(d.astype('uint8'), 'RGBA'); t = tempfile.NamedTemporaryFile(delete=False, suffix=".png"); img.save(t.name); return t.name
         p1 = g_t(f_cli); p2 = g_t(f_prov)
         pdf.image(p1, 30, y_f, 50, 20); pdf.image(p2, 130, y_f, 50, 20); os.unlink(p1); os.unlink(p2)
-        pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 8)
-        pdf.cell(95, 7, 'NOMBRE Y FIRMA DEL CONTRATANTE', 0, 0, 'C')
-        pdf.cell(95, 7, f'IVAN ORTIZ ({empresa_full})', 0, 1, 'C')
+        pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 8); pdf.cell(95, 7, 'FIRMA DEL CONTRATANTE', 0, 0, 'C'); pdf.cell(95, 7, f'IVAN ORTIZ ({empresa_full})', 0, 1, 'C')
     
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. INTERFAZ OPERATIVA
+# 4. INTERFAZ
 st.sidebar.title("🛡️ OPERACIONES IO")
 tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"])
 
 with st.container():
     c1, c2 = st.columns(2)
     with c1:
-        nom = st.text_input("👤 CLIENTE")
-        tel = st.text_input("📞 WHATSAPP (10 DIG)")
-        f_p = st.date_input("📅 FECHA INICIO")
+        nom = st.text_input("👤 CLIENTE"); tel = st.text_input("📞 WHATSAPP (10 DIG)"); f_p = st.date_input("📅 FECHA INICIO")
     with c2:
         m_sel = st.multiselect("📦 MATERIALES:", df_catalogo['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
         m_total = st.number_input("💵 GANANCIA / MANO DE OBRA ($)", min_value=0.0)
 
-    domicilio_input = st.text_input("🏠 DOMICILIO DEL CLIENTE")
-    notas_input = st.text_area("📝 NOTAS ADICIONALES")
+    domicilio_i = st.text_input("🏠 DOMICILIO DEL CLIENTE")
+    notas_i = st.text_area("📝 NOTAS ADICIONALES")
 
     items_pdf = []; total_final = 0.0
     if m_sel:
-        with st.expander("📋 PRORRATEO DE GANANCIA", expanded=True):
+        with st.expander("📋 CONFIGURACIÓN DE PRORRATEO", expanded=True):
             m_gan = st.multiselect("💰 CARGAR GANANCIA EN:", m_sel)
             temp = {}; t_u = 0
             for p in m_sel:
@@ -165,10 +151,12 @@ with f1: canv_cli = st_canvas(stroke_width=3, stroke_color="#000", background_co
 with f2: canv_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
 
 if st.button("🚀 FINALIZAR Y GENERAR CONTRATO"):
-    if canv_cli.image_data is not None and nom and domicilio_input:
+    if canv_cli.image_data is not None and nom and domicilio_i:
         try:
-            pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, canv_cli.image_data, canv_prov.image_data, f_p, domicilio_input, notas_input)
+            pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, canv_cli.image_data, canv_prov.image_data, f_p, domicilio_i, notas_i)
             st.markdown(f"""<div class='success-box'>🔒 SISTEMA: CONTRATO GENERADO CON ÉXITO.</div>""", unsafe_allow_html=True)
-            st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
+            msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmamos la generacion de su contrato. Adjunto el PDF.")
+            st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
         except Exception as e: st.error(f"ERROR: {e}")
     else: st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")
