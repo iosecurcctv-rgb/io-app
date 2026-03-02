@@ -1,7 +1,6 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
-from streamlit_drawable_canvas import st_canvas
 import pandas as pd
+from streamlit_drawable_canvas import st_canvas
 from datetime import datetime, timedelta
 from fpdf import FPDF
 import base64
@@ -21,13 +20,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXIÓN A GOOGLE SHEETS (Conexión corregida para tus Secrets)
+# 2. CONEXIÓN BLINDADA (Usando tu URL de publicación CSV)
+URL_CATALOGO_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9udZI738JSGiUljkyW02hc3gtcjoN869W3duYOR6VInie_fNvC5kXoByTrCm/pub?gid=596039047&single=true&output=csv"
+
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    # Leemos la pestaña "Catalogo" que ya tienes configurada
-    df_catalogo = conn.read(worksheet="Catalogo", ttl="0")
+    # Lectura directa del CSV para saltar errores de permisos
+    df_catalogo = pd.read_csv(URL_CATALOGO_CSV)
+    df_catalogo.columns = df_catalogo.columns.str.strip() 
 except Exception as e:
-    st.error(f"Error de conexión. Revisa los Secrets de Streamlit. Detalle: {e}")
+    st.error(f"⚠️ Esperando señal del Catálogo IO SECURITY. Verifica que la hoja esté publicada. Error: {e}")
     st.stop()
 
 # 3. FUNCIÓN GENERADORA DE PDF BLINDADO (ESTRATÉGICO PARA IVÁN ORTIZ)
@@ -45,7 +46,6 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli, firma_prov, f
     pdf.set_font('Arial', '', 10)
     pdf.cell(0, 5, f'Fecha de Emision: {datetime.now().strftime("%d/%m/%Y")}', ln=True, align='R')
     
-    # Fecha Programada de Instalación
     pdf.set_fill_color(235, 235, 235); pdf.ln(5)
     pdf.cell(0, 10, f' FECHA PROGRAMADA DE INSTALACION: {fecha_p.strftime("%d/%m/%Y")}', 1, 1, 'L', True)
     pdf.ln(5)
@@ -54,7 +54,7 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli, firma_prov, f
     pdf.set_font('Arial', '', 10); pdf.cell(0, 5, 'PRESTADOR: Ivan Ortiz Perea | IO SECURITY', ln=True)
     pdf.ln(5)
 
-    # Tabla de Conceptos (Con precios prorrateados - El cliente no ve tu ganancia)
+    # Tabla de Conceptos (Precios prorrateados)
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255)
     pdf.cell(140, 8, ' Descripcion del Sistema / Equipo Integrado', 1, 0, 'L', True)
     pdf.cell(50, 8, 'Precio Unitario ', 1, 1, 'C', True)
@@ -68,7 +68,6 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli, firma_prov, f
     pdf.cell(140, 12, ' TOTAL NETO A PAGAR', 1, 0, 'L')
     pdf.cell(50, 12, f"$ {total:,.2f} ", 1, 1, 'R')
     
-    # Blindaje Legal de IO SECURITY
     pdf.ln(10); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, 'CLAUSULAS DE SEGURIDAD Y GARANTIA:', ln=True)
     pdf.set_font('Arial', '', 8)
     clausulas = [
@@ -104,17 +103,11 @@ with st.container():
         nom = st.text_input("Nombre del Cliente")
         tel = st.text_input("WhatsApp del Cliente (10 dígitos)")
         f_p = st.date_input("Fecha Programada para Instalación", value=datetime.now() + timedelta(days=1))
-        
-        # Selección de Materiales desde tu Excel real
-        mats_totales = st.multiselect("1. Seleccionar TODOS los materiales:", df_catalogo['Producto'].tolist())
-        
-        # Selección de Prorrateo (Aquí es donde ocultas tu ganancia)
+        mats_totales = st.multiselect("1. Seleccionar materiales:", df_catalogo['Producto'].tolist())
         mats_para_ganancia = st.multiselect("2. Seleccionar productos donde OCULTAR la mano de obra:", mats_totales)
-        
         mano_obra_interna = st.number_input("Mano de Obra (Solo Ivan lo ve) $", min_value=0, value=1500)
 
     with c2:
-        # --- CÁLCULO ESTRATÉGICO DE PRORRATEO ---
         df_base = df_catalogo[df_catalogo['Producto'].isin(mats_totales)].copy()
         items_pdf = []
         total_final = 0.0
@@ -130,14 +123,10 @@ with st.container():
             total_final += p_final
             
         st.metric("TOTAL PARA EL CLIENTE", f"${total_final:,.2f}")
-        
-        if st.checkbox("🔍 Previsualizar Precios Unitarios (Antes de PDF)"):
-            st.table(pd.DataFrame(items_pdf))
-        
         obs = st.text_area("Observaciones adicionales")
 
 st.divider()
-st.subheader("✍️ Firmas Digitales en Pantalla")
+st.subheader("✍️ Firmas Digitales")
 f1, f2 = st.columns(2)
 with f1:
     st.write("Firma del Cliente:")
@@ -146,21 +135,14 @@ with f2:
     st.write("Firma Ivan Ortiz (IO SECURITY):")
     canv_prov = st_canvas(stroke_width=2, stroke_color="#000", background_color="#F0F0F0", height=150, width=300, key="prov")
 
-# --- ACCIONES FINALES ---
-if st.button("🚀 GENERAR CONTRATO Y PREPARAR ENVIO"):
+if st.button("🚀 GENERAR CONTRATO"):
     if canv_cli.image_data is not None and canv_prov.image_data is not None and nom and tel:
-        # 1. Generar PDF
         pdf_data = generar_pdf_io(nom, items_pdf, total_final, tipo_servicio, canv_cli.image_data, canv_prov.image_data, f_p, obs)
         b64 = base64.b64encode(pdf_data).decode()
-        
-        # 2. Descargar
         st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">📥 1. Descargar Contrato PDF</a>', unsafe_allow_html=True)
-        
-        # 3. WhatsApp Directo
-        msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio el contrato firmado de tu instalacion para el dia {f_p.strftime('%d/%m/%Y')}. ¡Saludos!"
+        msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio el contrato de tu instalacion para el dia {f_p.strftime('%d/%m/%Y')}."
         url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
         st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 2. Enviar por WhatsApp</a>', unsafe_allow_html=True)
-        
-        st.success(f"Contrato generado para {nom}. ¡Instalacion agendada!")
+        st.success("¡Contrato generado!")
     else:
-        st.error("Por favor completa: Nombre, Telefono y ambas Firmas.")
+        st.error("Completa Nombre, Teléfono y ambas Firmas.")
