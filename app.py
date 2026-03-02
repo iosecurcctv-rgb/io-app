@@ -3,7 +3,7 @@ import pandas as pd
 from streamlit_drawable_canvas import st_canvas
 from datetime import datetime, timedelta
 from fpdf import FPDF
-import base64, tempfile, os, urllib.parse
+import base64, tempfile, os, urllib.parse, random
 from PIL import Image
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
@@ -44,7 +44,7 @@ URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9u
 try: df_cat = pd.read_csv(URL_CSV); df_cat.columns = df_cat.columns.str.strip()
 except: st.error("⚠️ ERROR DE RED"); st.stop()
 
-# FUNCIÓN PARA CONVERTIR NÚMEROS A LETRAS (HASTA 999,999 PESOS)
+# FUNCIÓN PARA CONVERTIR NÚMEROS A LETRAS
 def numero_a_letras(numero):
     unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE", "DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE", "VEINTE", "VEINTIUN", "VEINTIDOS", "VEINTITRES", "VEINTICUATRO", "VEINTICINCO", "VEINTISEIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"]
     decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"]
@@ -76,19 +76,18 @@ def numero_a_letras(numero):
     letras += convertir_999(resto)
     return f"{letras.strip()} PESOS {decimal:02d}/100 M.N."
 
-# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN (SIMÉTRICO TIPO EXCEL) ----------------
+# 3. GENERADOR DE PDF COTIZACIÓN (INTACTO)
 def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo_pct, folio):
     pdf = FPDF()
     pdf.add_page()
     hoy = datetime.now()
     
-    # BLOQUE 1: ENCABEZADO Y LOGO (Diseño Cuadriculado Excel)
     pdf.set_fill_color(164, 25, 25) 
-    pdf.rect(10, 10, 50, 25, 'FD') # Cuadro de Logo
+    pdf.rect(10, 10, 50, 25, 'FD')
     try: pdf.image('logo.png', 12, 12, 46, 21)
     except: pass
     
-    pdf.rect(60, 10, 80, 25, 'D') # Cuadro de Título
+    pdf.rect(60, 10, 80, 25, 'D')
     pdf.set_xy(60, 12)
     pdf.set_font('Arial', 'B', 22)
     pdf.set_text_color(0, 0, 0)
@@ -99,7 +98,7 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.set_x(60)
     pdf.cell(80, 4, 'Email: iosecur.cctv@gmail.com   Tel: 7711648186', 0, 1, 'C')
     
-    pdf.rect(140, 10, 60, 25, 'D') # Cuadro de Folio general
+    pdf.rect(140, 10, 60, 25, 'D')
     pdf.set_xy(140, 12)
     pdf.set_font('Arial', 'B', 9)
     pdf.cell(30, 10, 'FOLIO', 1, 0, 'C')
@@ -112,7 +111,6 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     
     pdf.set_y(38)
     
-    # BLOQUE 2: DATOS DEL CLIENTE CERRADOS EN CONTORNO
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
     pdf.cell(190, 6, 'COTIZACION', 1, 1, 'C', True)
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', 'B', 8)
@@ -125,7 +123,6 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     
     pdf.ln(2)
     
-    # BLOQUE 3: TABLA DE EQUIPOS SIMÉTRICA (Con filas vacías rellenadas como Excel)
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
     pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
     pdf.cell(115, 6, 'DESCRIPCION', 1, 0, 'C', True)
@@ -133,7 +130,7 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.cell(30, 6, 'SUBTOTAL', 1, 1, 'C', True)
     
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
-    min_rows = 18 # Filas para dar el aspecto robusto a la tabla
+    min_rows = 18
     for i in range(max(min_rows, len(items))):
         if i < len(items):
             it = items[i]
@@ -151,8 +148,7 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.ln(0) 
     y_tot = pdf.get_y()
     
-    # BLOQUE 4: LEYENDA Y TOTALES EN CUADRÍCULA
-    pdf.rect(10, y_tot, 130, 18) # Cuadro que envuelve la leyenda
+    pdf.rect(10, y_tot, 130, 18)
     pdf.set_xy(12, y_tot + 2); pdf.set_font('Arial', '', 7)
     txt_leyenda = "En IO Security, nos dedicamos a ofrecer soluciones integrales para satisfacer las necesidades de tu negocio. Contamos con un amplio catalogo de productos y servicios, todos ellos cuidadosamente seleccionados para brindarte el mejor rendimiento y valor."
     pdf.multi_cell(126, 4, txt_leyenda, border=0)
@@ -170,7 +166,6 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.cell(25, 6, 'TOTAL:', 1, 0, 'R')
     pdf.set_text_color(0,0,0); pdf.set_font('Arial', 'B', 8); pdf.cell(35, 6, f"$ {total_final:,.2f}", 1, 1, 'R')
     
-    # BLOQUE 5: LETRA, PAGO Y CONSIDERACIONES CERRADAS
     pdf.set_y(y_tot + 18)
     pdf.set_font('Arial', 'B', 8)
     pdf.cell(190, 6, f'CANTIDAD CON LETRA: {numero_a_letras(total_final)}', 'L,T,R', 1, 'L')
@@ -186,12 +181,11 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
     txt_cons = f"Cotizacion con 20 dias de validez, a partir de la fecha elaborada. Se requiere de un anticipo del {anticipo_pct}% antes de la fecha de inicio de instalacion."
     pdf.cell(190, 6, txt_cons, 'L,R', 1, 'L')
-    pdf.cell(190, 15, '', 'L,B,R', 1) # Cuadro cerrado abajo
+    pdf.cell(190, 15, '', 'L,B,R', 1) 
     
     return pdf.output(dest='S').encode('latin-1')
-# --------------------------------------------------------------------------------
 
-# 3. GENERADOR DE PDF PARA CONTRATOS (INTACTO)
+# 3. GENERADOR DE PDF PARA CONTRATOS (MODIFICADO SOLO EN LA FIRMA ESTÉTICA)
 def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -293,13 +287,23 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
 
     pdf.set_font('Arial', 'I', 10)
     pdf.multi_cell(0, 5, f"Ambas partes leyeron este contrato, entienden su contenido y lo firman de conformidad en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses_txt[hoy.month-1]} del año {hoy.year}.")
+    
+    # MODIFICACIÓN APLICADA: FIRMA ORDENADA Y SIMÉTRICA (SOLO AQUÍ)
     if f_c_img is not None:
         y_f = pdf.get_y() + 8
         def g_t(d):
             img = Image.fromarray(d.astype('uint8'), 'RGBA'); t = tempfile.NamedTemporaryFile(delete=False, suffix=".png"); img.save(t.name); return t.name
         p1 = g_t(f_c_img); p2 = g_t(f_p_img)
         pdf.image(p1, 30, y_f, 50, 20); pdf.image(p2, 130, y_f, 50, 20); os.unlink(p1); os.unlink(p2)
-        pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 8); pdf.cell(95, 7, 'NOMBRE Y FIRMA DEL CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, f'IVAN ORTIZ ({empresa_full})', 0, 1, 'C')
+        
+        pdf.set_y(y_f + 22)
+        pdf.set_font('Arial', 'B', 8)
+        pdf.cell(95, 5, 'NOMBRE Y FIRMA DEL CLIENTE', 0, 0, 'C')
+        pdf.cell(95, 5, 'IVAN ORTIZ', 0, 1, 'C')
+        pdf.set_font('Arial', 'B', 7)
+        pdf.cell(95, 4, '', 0, 0, 'C')
+        pdf.cell(95, 4, f'({empresa_full})', 0, 1, 'C')
+        
     return pdf.output(dest='S').encode('latin-1')
 
 # 4. INTERFAZ OPERATIVA Y PRORRATEO (INTACTOS + MÓDULO COTIZACIÓN)
