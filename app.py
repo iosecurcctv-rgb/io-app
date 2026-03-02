@@ -44,8 +44,40 @@ URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9u
 try: df_cat = pd.read_csv(URL_CSV); df_cat.columns = df_cat.columns.str.strip()
 except: st.error("⚠️ ERROR DE RED"); st.stop()
 
-# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN TIPO EXCEL ----------------
-def generar_pdf_cotizacion(cli, items, total, tel, email):
+# FUNCIÓN PARA CONVERTIR NÚMEROS A LETRAS (HASTA 999,999 PESOS)
+def numero_a_letras(numero):
+    unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE", "DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE", "VEINTE", "VEINTIUN", "VEINTIDOS", "VEINTITRES", "VEINTICUATRO", "VEINTICINCO", "VEINTISEIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"]
+    decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"]
+    centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"]
+
+    def convertir_999(n):
+        if n == 100: return "CIEN"
+        if n == 0: return ""
+        c = n // 100
+        r = n % 100
+        res = centenas[c] + " " if c > 0 else ""
+        if r <= 29:
+            res += unidades[r]
+        else:
+            d = r // 10
+            u = r % 10
+            res += decenas[d]
+            if u > 0: res += " Y " + unidades[u]
+        return res.strip()
+
+    entero = int(numero)
+    decimal = int(round((numero - entero) * 100))
+    if entero == 0: return f"CERO PESOS {decimal:02d}/100 M.N."
+    letras = ""
+    miles = entero // 1000
+    resto = entero % 1000
+    if miles == 1: letras += "MIL "
+    elif miles > 1: letras += convertir_999(miles) + " MIL "
+    letras += convertir_999(resto)
+    return f"{letras.strip()} PESOS {decimal:02d}/100 M.N."
+
+# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN CORREGIDO ----------------
+def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo_pct):
     pdf = FPDF()
     pdf.add_page()
     hoy = datetime.now()
@@ -53,7 +85,7 @@ def generar_pdf_cotizacion(cli, items, total, tel, email):
     # Cuadro Rojo Superior para Logo
     pdf.set_fill_color(164, 25, 25) 
     pdf.rect(10, 10, 60, 25, 'F')
-    try: pdf.image('logo.png', 12, 12, 56)
+    try: pdf.image('logo.png', 12, 12, 56, 21)
     except: pass
     
     # Titulo Central
@@ -79,7 +111,8 @@ def generar_pdf_cotizacion(cli, items, total, tel, email):
     pdf.cell(20, 6, 'FECHA:', 1, 0, 'C')
     pdf.cell(25, 6, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
     
-    pdf.ln(10)
+    # FORZAR COORDENADA Y PARA EVITAR QUE SE ENCIME AL LOGO
+    pdf.set_y(40)
     
     # Datos del Cliente
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
@@ -117,36 +150,43 @@ def generar_pdf_cotizacion(cli, items, total, tel, email):
     txt_leyenda = "En IO Security, nos dedicamos a ofrecer soluciones integrales para satisfacer las necesidades de tu negocio. Contamos con un amplio catalogo de productos y servicios, todos ellos cuidadosamente seleccionados para brindarte el mejor rendimiento y valor."
     pdf.multi_cell(115, 4, txt_leyenda, border=1)
     
+    # CALCULOS DE IVA Y TOTAL
+    monto_iva = total_base * (iva_pct / 100.0)
+    total_final = total_base + monto_iva
+
     # Totales derecha
     pdf.set_xy(125, y_tot); pdf.set_font('Arial', 'B', 8)
     pdf.cell(35, 5, 'SUBTOTAL:', 1, 0, 'R')
-    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total:,.2f}", 1, 1, 'C')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total_base:,.2f}", 1, 1, 'C')
     pdf.set_x(125); pdf.set_font('Arial', 'B', 8)
     pdf.cell(35, 5, 'IMPUESTOS:', 1, 0, 'R')
-    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, "$ 0.00", 1, 1, 'C')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {monto_iva:,.2f}", 1, 1, 'C')
     pdf.set_x(125); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(255,0,0)
     pdf.cell(35, 5, 'TOTAL:', 1, 0, 'R')
-    pdf.set_text_color(0,0,0); pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total:,.2f}", 1, 1, 'C')
+    pdf.set_text_color(0,0,0); pdf.set_font('Arial', 'B', 8); pdf.cell(30, 5, f"$ {total_final:,.2f}", 1, 1, 'C')
     
-    # Pie de pagina de Cotización
-    pdf.ln(8); pdf.set_font('Arial', 'B', 8)
-    pdf.cell(0, 5, 'CANTIDAD CON LETRA:', 0, 1, 'L')
+    # Pie de pagina de Cotización (CANTIDAD CON LETRA AGREGADA)
+    pdf.set_y(max(pdf.get_y(), y_tot + 18))
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(0, 5, f'CANTIDAD CON LETRA: {numero_a_letras(total_final)}', 0, 1, 'L')
     pdf.cell(40, 5, 'METODO DE PAGO:', 0, 0, 'L')
     pdf.set_font('Arial', '', 8)
     pdf.cell(30, 5, '[   ] EFECTIVO', 0, 0, 'C')
     pdf.cell(30, 5, '[   ] TARJETA', 0, 0, 'C')
     pdf.cell(30, 5, '[   ] OTRO:', 0, 1, 'C')
     
+    # CONSIDERACIONES MODIFICADAS CON TEXTO REQUERIDO Y PORCENTAJE
     pdf.ln(3)
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
     pdf.cell(0, 6, 'CONSIDERACIONES', 1, 1, 'C', True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 20, '', 1, 1) # Cuadro vacio
+    pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
+    txt_cons = f"Cotizacion con 20 dias de validez, a partir de la fecha elaborada. Se requiere de un anticipo del {anticipo_pct}% antes de la fecha de inicio de instalacion."
+    pdf.multi_cell(0, 6, txt_cons, 1, 'L')
     
     return pdf.output(dest='S').encode('latin-1')
 # --------------------------------------------------------------------------------
 
-# 3. GENERADOR DE PDF CON TEXTO LITERAL EXACTO PARA CONTRATOS (INTACTO)
+# 3. GENERADOR DE PDF PARA CONTRATOS (INTACTO)
 def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -157,7 +197,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, empresa_full, ln=True, align='C')
     pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f"Fecha de Emision: {hoy.day} de {meses_txt[hoy.month-1]} de {hoy.year}", ln=True, align='R')
     pdf.ln(5)
-    
     try: pdf.image('logo.png', 10, 18, 35)
     except: pass
     pdf.ln(32) 
@@ -271,9 +310,15 @@ with st.container():
     with c2:
         m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
         m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0)
+        
+        # AGREGADOS DE COTIZACIÓN (SOLO VISIBLES SI ELIGES COTIZACIÓN)
+        if tipo == "Cotización":
+            iva_sel = st.selectbox("¿Agregar IVA (16%)?", ["NO", "SÍ"])
+            iva_pct = 16 if iva_sel == "SÍ" else 0
+            anticipo_sel = st.selectbox("Porcentaje de Anticipo:", ["50", "60", "70", "80", "100"])
 
-    dom_input = st.text_input("🏠 DOMICILIO CLIENTE")
-    notas_input = st.text_area("📝 NOTAS ADICIONALES")
+    dom_input = st.text_input("🏠 DOMICILIO CLIENTE") if tipo != "Cotización" else ""
+    notas_input = st.text_area("📝 NOTAS ADICIONALES") if tipo != "Cotización" else ""
 
     items_pdf = []; total_final = 0.0; periodo_io = ""; tec_io = ""; n_cam_io = 0; can_io = ""
     
@@ -309,7 +354,7 @@ with st.container():
             v_d = round(p_d_mnt+(ex if f"Limpieza {sel_d}" in m_prorr else 0), 2)
             items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica {sel_d}", "Subtotal_Final": v_d}); total_final += v_d
 
-    elif m_sel: # ESTO APLICA PERFECTAMENTE PARA INSTALACIÓN Y COTIZACIÓN
+    elif m_sel: # APLICA PARA INSTALACIÓN Y COTIZACIÓN
         with st.expander("📋 CONFIGURAR EQUIPOS Y CANTIDADES", expanded=True):
             m_gan = st.multiselect("💰 CARGAR GANANCIA / MANO DE OBRA EN:", m_sel)
             temp = {}; t_u = 0
@@ -322,19 +367,20 @@ with st.container():
                 sub = round((base + (ex_i if p in m_gan else 0)) * q, 2)
                 items_pdf.append({"Cantidad": q, "Concepto": p, "Subtotal_Final": sub}); total_final += sub
 
-    st.divider(); st.metric("VALOR TOTAL", f"${total_final:,.2f}")
-
-st.markdown("### ✍️ FIRMAS DIGITALES")
-f1, f2 = st.columns(2)
-with f1: c_cli = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="cli", display_toolbar=True)
-with f2: c_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
+    # CÁLCULO VISUAL EN LA APP PARA COTIZACIÓN (REFLEJA IVA)
+    if tipo == "Cotización":
+        visual_iva = total_final * (iva_pct / 100.0)
+        visual_total = total_final + visual_iva
+        st.divider(); st.metric("TOTAL COTIZACIÓN (CON IVA)", f"${visual_total:,.2f}")
+    else:
+        st.divider(); st.metric("VALOR TOTAL", f"${total_final:,.2f}")
 
 # LÓGICA DE BOTONES SEPARADA PARA NO ROMPER NADA
 if tipo == "Cotización":
     if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
         if nom:
             try:
-                pdf_b = generar_pdf_cotizacion(nom, items_pdf, total_final, tel, email_input)
+                pdf_b = generar_pdf_cotizacion(nom, items_pdf, total_final, tel, email_input, iva_pct, anticipo_sel)
                 st.markdown(f"<div class='success-box'>📝 SISTEMA: COTIZACIÓN CREADA CON ÉXITO.</div>", unsafe_allow_html=True)
                 st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Cotizacion_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR COTIZACIÓN</a>', unsafe_allow_html=True)
                 msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le adjunto su cotizacion en formato PDF. Quedo a sus ordenes.")
@@ -342,6 +388,11 @@ if tipo == "Cotización":
             except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
         else: st.error("⚠️ REQUERIDO: Nombre del cliente.")
 else:
+    st.markdown("### ✍️ FIRMAS DIGITALES")
+    f1, f2 = st.columns(2)
+    with f1: c_cli = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="cli", display_toolbar=True)
+    with f2: c_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
+
     if st.button("🚀 FINALIZAR Y GENERAR EXPEDIENTE"):
         if c_cli.image_data is not None and nom and dom_input:
             try:
