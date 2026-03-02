@@ -10,8 +10,12 @@ import urllib.parse
 import tempfile
 import os
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL RELAJADA (VERDE ESMERALDA)
-st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="🛡️", layout="wide")
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (CARGA TU LOGO COMO ICONO DE APP)
+st.set_page_config(
+    page_title="IO SECURITY - Control Maestro", 
+    page_icon="logo.png", # <--- Tu logo ahora es el icono oficial
+    layout="wide"
+)
 
 st.markdown("""
     <style>
@@ -25,7 +29,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# MOSTRAR LOGO
+# MOSTRAR LOGO EN INTERFAZ
 col_logo, _ = st.columns([1, 2])
 with col_logo:
     try: st.image('logo.png', width=220)
@@ -179,7 +183,6 @@ with st.container():
 st.markdown("### ✍️ Panel de Firmas (Usa la Papelera para borrar)")
 f1, f2 = st.columns(2)
 with f1: 
-    # ACTIVAR BARRA DE HERRAMIENTAS (drawing_mode="freedraw")
     canv_cli = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="cli", drawing_mode="freedraw", display_toolbar=True)
     st.caption("Firma del Cliente")
 with f2: 
@@ -193,7 +196,6 @@ if st.button("🚀 GENERAR CONTRATO"):
             b64 = base64.b64encode(pdf_bytes).decode()
             st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">📥 Descargar Contrato PDF</a>', unsafe_allow_html=True)
             
-            # BOTÓN WHATSAPP DINÁMICO
             msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio} ({sub_mant if tipo_servicio=='Mantenimiento' else ''})."
             url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 Compartir por WhatsApp</a>', unsafe_allow_html=True)
