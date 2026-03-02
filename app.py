@@ -8,31 +8,31 @@ from PIL import Image
 import io
 import urllib.parse
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL PRO
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL MEJORADA
 st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="🛡️", layout="wide")
 
-# Estilos CSS para un diseño tecnológico y atractivo
+# Estilos CSS para un diseño tecnológico pero cómodo para la vista
 st.markdown("""
     <style>
-    /* Fondo oscuro y fuentes modernas */
-    .stApp { background-color: #0E1117; color: #E0E0E0; }
+    /* Fondo oscuro relajado */
+    .stApp { background-color: #111418; color: #D1D5DB; }
     
-    /* Títulos estilo Cyber con color cian de seguridad */
-    h1, h2, h3 { color: #00FFFF !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-transform: uppercase; letter-spacing: 2px; }
+    /* Títulos en Verde Esmeralda Suave (menos lastimoso) */
+    h1, h2, h3 { color: #50C878 !important; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; }
     
-    /* Botones con efecto neón */
-    .stButton>button { width: 100%; border-radius: 8px; height: 3.5em; background-color: #16191F; color: #00FFFF; border: 1px solid #00FFFF; font-weight: bold; transition: 0.4s; }
-    .stButton>button:hover { background-color: #00FFFF; color: #0E1117; box-shadow: 0 0 15px #00FFFF; }
+    /* Botones con estilo moderno */
+    .stButton>button { width: 100%; border-radius: 8px; height: 3.5em; background-color: #1F2937; color: #50C878; border: 1px solid #50C878; font-weight: bold; transition: 0.3s; }
+    .stButton>button:hover { background-color: #50C878; color: #111418; box-shadow: 0 0 10px #50C878; }
     
-    /* Estilo de botones de WhatsApp y Descarga */
-    .whatsapp-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white; background-color: #25D366; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; transition: 0.3s; }
-    .whatsapp-btn:hover { background-color: #128C7E; box-shadow: 0 0 10px #25D366; }
+    /* Botones de acción final */
+    .whatsapp-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white; background-color: #2E7D32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; transition: 0.3s; }
+    .whatsapp-btn:hover { background-color: #1B5E20; }
     
-    .download-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white; background-color: #333; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; border: 1px solid #555; transition: 0.3s; }
-    .download-btn:hover { background-color: #555; border-color: #00FFFF; }
+    .download-btn { display: inline-block; padding: 14px; border-radius: 8px; color: white; background-color: #374151; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; border: 1px solid #4B5563; transition: 0.3s; }
+    .download-btn:hover { border-color: #50C878; background-color: #4B5563; }
 
-    /* Contenedores con borde sutil */
-    div.stBlock { border: 1px solid #262730; padding: 1.5rem; border-radius: 12px; background-color: #16191F; }
+    /* Etiquetas de texto */
+    .stMarkdown p { color: #ABB2BF; font-size: 1.05rem; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,7 +51,7 @@ try:
     df_catalogo = pd.read_csv(URL_CATALOGO_CSV)
     df_catalogo.columns = df_catalogo.columns.str.strip() 
 except Exception as e:
-    st.error(f"⚠️ Error de enlace: {e}")
+    st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
 # 3. FUNCIÓN GENERADORA DE PDF PROFESIONAL
@@ -73,7 +73,7 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli, firma_prov, f
     pdf.set_font('Arial', '', 10); pdf.cell(0, 5, 'PRESTADOR: Iván Ortiz Perea | IO SECURITY', ln=True)
     pdf.ln(5)
 
-    # Tabla con diseño limpio
+    # Tabla de Conceptos
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255)
     pdf.cell(140, 8, ' Descripción Técnica del Sistema', 1, 0, 'L', True)
     pdf.cell(50, 8, 'Inversión Unit. ', 1, 1, 'C', True)
@@ -109,9 +109,9 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli, firma_prov, f
 
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. INTERFAZ MEJORADA
-st.sidebar.title("🛡️ DASHBOARD IO")
-tipo_servicio = st.sidebar.radio("Módulo de Servicio:", ["Instalación CCTV", "IO Prevent", "Mantenimiento"])
+# 4. INTERFAZ EN ESPAÑOL
+st.sidebar.title("🛡️ PANEL IO SECURITY")
+tipo_servicio = st.sidebar.radio("Módulo de Servicio:", ["Instalación CCTV", "Servicio Preventivo", "Mantenimiento"])
 
 st.subheader(f"⚡ SISTEMA DE GESTIÓN: {tipo_servicio}")
 
@@ -129,7 +129,7 @@ with st.container():
         mats_para_ganancia = st.multiselect("Ocultar Mano de Obra en:", mats_totales)
         mano_obra_interna = st.number_input("Mano de Obra Oculta ($)", min_value=0, value=1500)
 
-    # Lógica de cálculo
+    # Lógica de cálculo de prorrateo
     df_base = df_catalogo[df_catalogo['Producto'].isin(mats_totales)].copy()
     items_pdf = []
     total_final = 0.0
@@ -164,6 +164,6 @@ if st.button("🚀 FINALIZAR Y GENERAR CONTRATO"):
         msg = f"Hola {nom}, soy Iván de IO SECURITY. Te envío el contrato firmado de tu servicio."
         url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
         st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
-        st.success("✅ Documentación lista.")
+        st.success("✅ Documentación generada con éxito.")
     else:
         st.error("⚠️ Faltan datos críticos o firmas.")
