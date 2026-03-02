@@ -7,8 +7,10 @@ import base64
 from PIL import Image
 import io
 import urllib.parse
+import tempfile
+import os
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (VERDE ESMERALDA)
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL RELAJADA (VERDE ESMERALDA)
 st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -38,7 +40,7 @@ except Exception as e:
     st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN GENERADORA DE PDF (CORRECCIÓN rfind APLICADA)
+# 3. FUNCIÓN GENERADORA DE PDF (SOLUCIÓN DEFINITIVA DE FIRMAS)
 def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -70,26 +72,26 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
     
     pdf.ln(10); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, 'CLAUSULAS DE SEGURIDAD Y GARANTIA:', ln=True)
     pdf.set_font('Arial', '', 8)
-    clausulas = ["1. Sistema probado a conformidad.", "2. Exclusión por fallas de Internet/Luz.", "3. Garantía de 1 año."]
-    for c in clausulas: pdf.cell(0, 4, c, ln=True)
+    pdf.cell(0, 4, "1. Sistema probado a conformidad. 2. Exclusion por fallas de Internet/Luz. 3. Garantia de 1 año.", ln=True)
 
-    # CORRECCIÓN DE ERROR DE FIRMAS: Se añade el parámetro 'PNG' al final de pdf.image
+    # --- ARREGLO FINAL DE FIRMAS MEDIANTE ARCHIVOS TEMPORALES ---
     if firma_cli_data is not None and firma_prov_data is not None:
         y_firma = pdf.get_y() + 15
         
-        def procesar_firma(data):
+        def guardar_temp(data):
             img = Image.fromarray(data.astype('uint8'), 'RGBA')
-            buffer = io.BytesIO()
-            img.save(buffer, format='PNG')
-            buffer.seek(0)
-            return buffer
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            img.save(tmp.name)
+            return tmp.name
 
-        f_cli_buf = procesar_firma(firma_cli_data)
-        f_prov_buf = procesar_firma(firma_prov_data)
+        path_cli = guardar_temp(firma_cli_data)
+        path_prov = guardar_temp(firma_prov_data)
         
-        # EL CAMBIO CLAVE: Especificar el tipo de imagen explícitamente como 'PNG'
-        pdf.image(f_cli_buf, 20, y_firma, 50, 25, type='PNG')
-        pdf.image(f_prov_buf, 120, y_firma, 50, 25, type='PNG')
+        pdf.image(path_cli, 20, y_firma, 50, 25)
+        pdf.image(path_prov, 120, y_firma, 50, 25)
+        
+        # Limpieza de archivos temporales
+        os.unlink(path_cli); os.unlink(path_prov)
         
         pdf.set_y(y_firma + 25); pdf.set_font('Arial', 'B', 9)
         pdf.cell(95, 7, 'FIRMA CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, 'IVAN ORTIZ (IO SECURITY)', 0, 1, 'C')
@@ -140,7 +142,11 @@ with st.container():
             extra_aplicado = extra_por_unidad if prod in mats_para_ganancia else 0
             subtotal = (precio_base + extra_aplicado) * cant
             
-            items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": subtotal})
+            items_pdf.append({
+                "Cantidad": cant, 
+                "Concepto": prod, 
+                "Subtotal_Final": subtotal
+            })
             total_final += subtotal
             
     st.divider()
