@@ -185,7 +185,7 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     
     return pdf.output(dest='S').encode('latin-1')
 
-# 3. GENERADOR DE PDF PARA CONTRATOS (MODIFICADO SOLO EN LA FIRMA ESTÉTICA)
+# 3. GENERADOR DE PDF PARA CONTRATOS (MODIFICADO SOLO QUITANDO LA FECHA REPETIDA EN IO PREVENT)
 def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -202,7 +202,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
 
     if tipo == "Servicio IO Prevent":
         pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE PRESTACION DE SERVICIO: "IO PREVENT"', ln=True, align='C')
-        pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f"FECHA: {hoy.day} de {meses_txt[hoy.month-1]} del {hoy.year} LUGAR: Pachuca de Soto/Hidalgo.", ln=True, align='R'); pdf.ln(5)
+        pdf.ln(5)
         pdf.set_font('Arial', 'B', 10); pdf.cell(0, 7, "REUNIDOS", ln=True); pdf.set_font('Arial', '', 10)
         pdf.multi_cell(0, 5, f"De una parte, IO SECURITY, en adelante 'EL PRESTADOR'. Y de otra parte, {cli}, en adelante 'EL CLIENTE'. Ambas partes acuerdan celebrar el presente CONTRATO DE SOPORTE TÉCNICO REMOTO.")
         
@@ -288,7 +288,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     pdf.set_font('Arial', 'I', 10)
     pdf.multi_cell(0, 5, f"Ambas partes leyeron este contrato, entienden su contenido y lo firman de conformidad en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses_txt[hoy.month-1]} del año {hoy.year}.")
     
-    # MODIFICACIÓN APLICADA: FIRMA ORDENADA Y SIMÉTRICA (SOLO AQUÍ)
     if f_c_img is not None:
         y_f = pdf.get_y() + 8
         def g_t(d):
@@ -306,7 +305,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. INTERFAZ OPERATIVA Y PRORRATEO (INTACTOS + MÓDULO COTIZACIÓN)
+# 4. INTERFAZ OPERATIVA Y PRORRATEO (INTACTOS)
 st.sidebar.title("🛡️ CONTROL IO")
 tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
@@ -320,7 +319,6 @@ with st.container():
         m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
         m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0)
         
-        # AGREGADOS DE COTIZACIÓN
         if tipo == "Cotización":
             folio_input = st.text_input("📝 NÚMERO DE FOLIO", value="001")
             iva_sel = st.selectbox("¿Agregar IVA (16%)?", ["NO", "SÍ"])
@@ -364,7 +362,7 @@ with st.container():
             v_d = round(p_d_mnt+(ex if f"Limpieza {sel_d}" in m_prorr else 0), 2)
             items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica {sel_d}", "Subtotal_Final": v_d}); total_final += v_d
 
-    elif m_sel: # APLICA PARA INSTALACIÓN Y COTIZACIÓN
+    elif m_sel: 
         with st.expander("📋 CONFIGURAR EQUIPOS Y CANTIDADES", expanded=True):
             m_gan = st.multiselect("💰 CARGAR GANANCIA / MANO DE OBRA EN:", m_sel)
             temp = {}; t_u = 0
@@ -377,7 +375,6 @@ with st.container():
                 sub = round((base + (ex_i if p in m_gan else 0)) * q, 2)
                 items_pdf.append({"Cantidad": q, "Concepto": p, "Subtotal_Final": sub}); total_final += sub
 
-    # CÁLCULO VISUAL EN LA APP PARA COTIZACIÓN (REFLEJA IVA)
     if tipo == "Cotización":
         visual_iva = total_final * (iva_pct / 100.0)
         visual_total = total_final + visual_iva
@@ -385,7 +382,6 @@ with st.container():
     else:
         st.divider(); st.metric("VALOR TOTAL", f"${total_final:,.2f}")
 
-# LÓGICA DE BOTONES SEPARADA
 if tipo == "Cotización":
     if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
         if nom:
