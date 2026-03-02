@@ -10,37 +10,40 @@ import urllib.parse
 import tempfile
 import os
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (ICONO FORZADO V3 + ALTA VISIBILIDAD)
-st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="logo.png", layout="wide")
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL RELAJADA (VERDE ESMERALDA)
+st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="🛡️", layout="wide")
 
+# ESTILOS CORREGIDOS PARA ALTA VISIBILIDAD (OCULTA EL CÓDIGO Y AGRANDA LETRAS)
 st.markdown("""
-    <head>
-        <link rel="apple-touch-icon" href="logo.png?v=3">
-        <link rel="icon" type="image/png" href="logo.png?v=3">
-        <link rel="shortcut icon" href="logo.png?v=3">
-    </head>
     <style>
-    /* Fondo oscuro y texto blanco grande para lectura fácil en celular */
-    .stApp { background-color: #111418; color: #FFFFFF; font-size: 20px; }
+    .stApp { background-color: #111418; color: #D1D5DB; }
+    h1, h2, h3 { color: #50C878 !important; font-family: 'Segoe UI', sans-serif; }
     
-    h1, h2, h3 { color: #50C878 !important; font-family: 'Segoe UI', sans-serif; font-weight: bold !important; }
+    /* ETIQUETAS GIGANTES Y BLANCAS PARA CELULAR */
+    label { 
+        font-size: 26px !important; 
+        color: #FFFFFF !important; 
+        font-weight: bold !important; 
+        display: block !important;
+        margin-bottom: 15px !important;
+    }
     
-    /* Etiquetas de campos (Labels) GIGANTES y blancas */
-    label { font-size: 24px !important; color: #FFFFFF !important; font-weight: bold !important; margin-bottom: 10px !important; }
-    
-    /* Cuadros de entrada con bordes claros y texto grande */
+    /* CAMPOS DE ENTRADA CON BORDE CLARO Y LETRA GRANDE */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stTextArea>div>textarea {
-        background-color: #1F2937 !important; color: #FFFFFF !important; border: 2px solid #50C878 !important; font-size: 20px !important;
+        background-color: #1F2937 !important; 
+        color: #FFFFFF !important; 
+        border: 2px solid #50C878 !important; 
+        font-size: 22px !important;
+        height: 65px !important;
     }
 
-    .stButton>button { width: 100%; border-radius: 8px; height: 4em; background-color: #1F2937; color: #50C878; border: 1px solid #50C878; font-weight: bold; transition: 0.3s; font-size: 22px; }
+    .stButton>button { width: 100%; border-radius: 8px; height: 4.5em; background-color: #1F2937; color: #50C878; border: 1px solid #50C878; font-weight: bold; transition: 0.3s; font-size: 24px; }
     .stButton>button:hover { background-color: #50C878; color: #111418; box-shadow: 0 0 10px #50C878; }
     
-    /* Botones de descarga y whatsapp corregidos */
-    .whatsapp-btn { display: inline-block; padding: 20px; border-radius: 8px; color: white !important; background-color: #2E7D32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; font-size: 22px; border: 1px solid #FFFFFF; }
-    .download-btn { display: inline-block; padding: 20px; border-radius: 8px; color: white !important; background-color: #374151; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; border: 1px solid #FFFFFF; font-size: 22px; }
+    .whatsapp-btn { display: inline-block; padding: 22px; border-radius: 8px; color: white !important; background-color: #2E7D32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; font-size: 24px; border: 1px solid #FFFFFF; }
+    .download-btn { display: inline-block; padding: 22px; border-radius: 8px; color: white !important; background-color: #374151; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px; border: 1px solid #FFFFFF; font-size: 24px; }
     
-    .streamlit-expanderHeader { background-color: #1F2937 !important; color: #50C878 !important; border: 1px solid #50C878; border-radius: 8px; font-size: 20px !important; }
+    .streamlit-expanderHeader { background-color: #1F2937 !important; color: #50C878 !important; border: 1px solid #50C878; border-radius: 8px; font-size: 22px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -67,22 +70,18 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     try: pdf.image('logo.png', 10, 8, 40)
     except: pdf.set_font('Arial', 'B', 16); pdf.cell(0, 10, 'IO SECURITY', ln=True)
     
-    # Título dinámico basado en la selección de la app
     tit = f"CONTRATO DE PRESTACION DE SERVICIOS: MANTENIMIENTO {subtipo.upper()}"
     pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, f'ORDEN DE SERVICIO', ln=True, align='R')
     pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f'Fecha de Emision: {datetime.now().strftime("%d/%m/%Y")}', ln=True, align='R')
     pdf.ln(18)
 
     pdf.set_font('Arial', 'B', 11); pdf.cell(0, 7, tit, ln=True, align='C')
-    pdf.ln(4)
-    pdf.set_font('Arial', '', 9)
+    pdf.ln(4); pdf.set_font('Arial', '', 9)
     pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, IO SECURITY ('EL PRESTADOR'), y por la otra, {cliente} ('EL CLIENTE').")
     pdf.ln(2)
 
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
-    pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True)
-    pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True)
-    pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
+    pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True); pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
     
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
     for item in items_finales:
@@ -98,8 +97,7 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "ANULACION Y COSTOS", ln=True)
     pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por manipulacion externa o daños electricos. Visitas tecnicas adicionales: $250.00 MXN.")
 
-    hoy = datetime.now()
-    meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    hoy = datetime.now(); meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     txt_f = f"Firmado en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}."
     pdf.ln(4); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt_f)
 
@@ -121,7 +119,6 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
 st.sidebar.title("🛡️ PANEL IO SECURITY")
 tipo_servicio = st.sidebar.radio("Tipo de Servicio:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"])
 
-# Selector específico para Mantenimiento
 sub_mant = "Preventivo"
 if tipo_servicio == "Mantenimiento":
     sub_mant = st.sidebar.selectbox("Tipo de Mantenimiento:", ["Preventivo", "Correctivo"])
@@ -141,11 +138,11 @@ with st.container():
     items_pdf = []; total_final = 0.0
 
     if tipo_servicio == "Mantenimiento":
-        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA (Cámaras y DVR)", expanded=True):
+        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA", expanded=True):
             m1, m2 = st.columns(2)
             with m1:
                 c_mant = st.number_input("Cámaras a dar mantenimiento", min_value=0, value=0)
-                p_mant_base = 150 # Precio base sin prorrateo
+                p_mant_base = 150 
                 c_bal = st.number_input("Transceptores (Baluns) a reemplazar", min_value=0, value=0)
                 p_bal_base = 120
             with m2:
@@ -153,7 +150,6 @@ with st.container():
                 costos_dvr = {"Ninguna": 0, "DVR 4 Canales": 250, "DVR 8 Canales": 350, "DVR 16 Canales": 450, "Placa Madre (Limpieza profunda)": 600}
                 p_dvr_base = costos_dvr[sel_dvr]
 
-            # LÓGICA DE PRORRATEO
             servicios_activos = (1 if c_mant > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
             extra_por_concepto = mano_obra_total / servicios_activos if servicios_activos > 0 else 0
 
@@ -194,10 +190,8 @@ if st.button("🚀 GENERAR CONTRATO"):
         try:
             pdf_out = generar_pdf_io(nom, items_pdf, total_final, tipo_servicio, sub_mant, canv_cli.image_data, canv_prov.image_data, f_p, obs)
             b64 = base64.b64encode(pdf_out).decode()
-            # Botón de descarga azul
-            st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
-            # Botón de WhatsApp verde
-            msg_wa = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato. Por favor adjunta el PDF que te acabo de enviar.")
-            st.markdown(f'<a href="https://wa.me/52{tel}?text={msg_wa}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR PDF</a>', unsafe_allow_html=True)
+            msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato. Por favor adjunta el PDF que te acabo de descargar.")
+            st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
         except Exception as e: st.error(f"Error: {e}")
     else: st.error("⚠️ Completa Nombre, WhatsApp y Firmas.")
