@@ -10,7 +10,7 @@ import urllib.parse
 import tempfile
 import os
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (VERDE ESMERALDA)
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL RELAJADA (VERDE ESMERALDA)
 st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -38,17 +38,16 @@ try:
     df_catalogo = pd.read_csv(URL_CATALOGO_CSV)
     df_catalogo.columns = df_catalogo.columns.str.strip() 
 except Exception as e:
-    st.error(f"⚠️ Error de catálogo: {e}")
+    st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN PDF PROFESIONAL (REDONDEO + TÍTULOS)
+# 3. FUNCIÓN GENERADORA DE PDF (CON TÍTULO DINÁMICO Y GARANTÍA 6 MESES)
 def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
     try: pdf.image('logo.png', 10, 8, 40)
     except: pdf.set_font('Arial', 'B', 16); pdf.cell(0, 10, 'IO SECURITY', ln=True)
     
-    # Título dinámico
     if tipo == "Mantenimiento":
         tit_doc = f"CONTRATO DE PRESTACION DE SERVICIOS: MANTENIMIENTO {subtipo.upper()}"
         garantia_ref = "6 meses"
@@ -64,11 +63,8 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     pdf.ln(4)
     pdf.set_font('Arial', '', 9)
     pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, IO SECURITY ('EL PRESTADOR'), y por la otra, {cliente} ('EL CLIENTE').")
-    
-    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA PRIMERA: DETALLE TECNICO", ln=True)
     pdf.ln(2)
 
-    # Tabla con REDONDEO
     pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
     pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True)
     pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True)
@@ -81,17 +77,17 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
         pdf.cell(50, 9, f"$ {round(item['Subtotal_Final'], 2):,.2f} ", 1, 1, 'R')
     
     pdf.set_font('Arial', 'B', 9); pdf.cell(140, 9, ' TOTAL NETO A PAGAR', 1, 0, 'L'); pdf.cell(50, 9, f"$ {round(total, 2):,.2f} ", 1, 1, 'R')
+
+    pdf.ln(4); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA DE GARANTIAS", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"- Refacciones/Equipos: {garantia_ref} contra defectos de fabrica.\n- Mano de Obra: 4 meses sobre el mantenimiento realizado.")
     
-    # Cláusulas de Garantía Dinámica
-    pdf.ln(4); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEGUNDA: GARANTIAS", ln=True)
-    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"- Refacciones/Equipos: {garantia_ref} contra defectos de fabrica.\n- Mano de Obra: 4 meses sobre el trabajo realizado.")
-    
-    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA TERCERA: ANULACION Y COSTOS", ln=True)
-    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "Se anula por variaciones de voltaje o daño fisico. Visitas fuera de garantia: $250.00 MXN.")
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "ANULACION Y COSTOS", ln=True)
+    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por manipulacion externa o daños electricos. Visitas tecnicas adicionales: $250.00 MXN.")
 
     hoy = datetime.now()
     meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    pdf.ln(4); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, f"Firmado en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}.")
+    txt_f = f"Firmado en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}."
+    pdf.ln(4); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt_f)
 
     if firma_cli_data is not None and firma_prov_data is not None:
         y_f = pdf.get_y() + 10
@@ -124,59 +120,55 @@ with st.container():
         tel = st.text_input("WhatsApp (10 dígitos)")
         f_p = st.date_input("Fecha Programada", value=datetime.now() + timedelta(days=1))
     with c2:
-        mats_seleccionados = st.multiselect("Materiales del catálogo:", df_catalogo['Producto'].tolist())
-        mano_obra_manual = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=1500 if tipo_servicio != "Mantenimiento" else 0)
+        mats_extra = st.multiselect("Materiales extra del catálogo:", df_catalogo['Producto'].tolist())
+        mano_obra_total = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=0)
 
     items_pdf = []; total_final = 0.0
 
-    # SECCIÓN MANTENIMIENTO PRO
     if tipo_servicio == "Mantenimiento":
-        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA MANTENIMIENTO", expanded=True):
+        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA (Cámaras y DVR)", expanded=True):
             m1, m2 = st.columns(2)
             with m1:
-                c_cam = st.number_input("Cámaras a mantener", min_value=0, value=0)
-                p_cam_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
-                c_bal = st.number_input("Baluns a reemplazar", min_value=0, value=0)
-                p_bal_base = st.number_input("Costo por par $", min_value=0, value=120)
+                c_mant = st.number_input("Cámaras a dar mantenimiento", min_value=0, value=0)
+                p_mant_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
+                c_bal = st.number_input("Transceptores (Baluns) a reemplazar", min_value=0, value=0)
+                p_bal_base = st.number_input("Costo por par de Balun $", min_value=0, value=120)
             with m2:
-                sel_dvr = st.selectbox("Limpieza DVR", ["Ninguna", "DVR 4 Canales", "DVR 8 Canales", "DVR 16 Canales", "Placa Madre"])
+                sel_dvr = st.selectbox("Limpieza de DVR", ["Ninguna", "DVR 4 Canales", "DVR 8 Canales", "DVR 16 Canales", "Placa Madre"])
                 costos_dvr = {"Ninguna": 0, "DVR 4 Canales": 250, "DVR 8 Canales": 350, "DVR 16 Canales": 450, "Placa Madre": 600}
                 p_dvr_base = st.number_input("Costo Limpieza DVR $", value=costos_dvr[sel_dvr])
 
-            serv_activos = (1 if c_cam > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
-            extra_oculto = round(mano_obra_manual / serv_activos, 2) if serv_activos > 0 else 0
+            serv_activos = (1 if c_mant > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
+            extra_por_concepto = round(mano_obra_total / serv_activos, 2) if serv_activos > 0 else 0
 
-            if c_cam > 0:
-                sub = (c_cam * p_cam_base) + extra_oculto
-                items_pdf.append({"Cantidad": c_cam, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": sub})
-                total_final += sub
+            if c_mant > 0:
+                p_final = (c_mant * p_mant_base) + extra_por_concepto
+                items_pdf.append({"Cantidad": c_mant, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": p_final})
+                total_final += p_final
             if c_bal > 0:
-                sub = (c_bal * p_bal_base) + extra_oculto
-                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": sub})
-                total_final += sub
+                p_final = (c_bal * p_bal_base) + extra_por_concepto
+                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": p_final})
+                total_final += p_final
             if p_dvr_base > 0:
-                sub = p_dvr_base + extra_oculto
-                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": sub})
-                total_final += sub
+                p_final = p_dvr_base + extra_por_concepto
+                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": p_final})
+                total_final += p_final
 
-    # SECCIÓN INSTALACIÓN NUEVA / MATERIALES EXTRA
-    if mats_seleccionados:
-        with st.expander("📦 CANTIDADES DE MATERIALES", expanded=True):
-            temp_data = {}; total_unidades_ganancia = 0
-            for prod in mats_seleccionados:
+    if mats_extra:
+        with st.expander("📦 CANTIDADES DE MATERIALES EXTRA", expanded=True):
+            temp_data = {}; total_unidades = 0
+            for prod in mats_extra:
                 col_q, col_p = st.columns([1, 4])
-                with col_q: q = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
+                with col_q: cant = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
                 with col_p: st.write(f"📦 **{prod}**")
-                temp_data[prod] = q
-                total_unidades_ganancia += q
+                temp_data[prod] = cant
+                total_unidades += cant
             
-            # Prorrateo para instalación nueva
-            extra_unit_ins = round(mano_obra_manual / total_unidades_ganancia, 2) if tipo_servicio != "Mantenimiento" and total_unidades_ganancia > 0 else 0
-            
-            for prod, q in temp_data.items():
+            extra_ins = round(mano_obra_total / total_unidades, 2) if tipo_servicio != "Mantenimiento" and total_unidades > 0 else 0
+            for prod, cant in temp_data.items():
                 p_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
-                sub = (p_base + extra_unit_ins) * q
-                items_pdf.append({"Cantidad": q, "Concepto": prod, "Subtotal_Final": sub})
+                sub = (p_base + extra_ins) * cant
+                items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": sub})
                 total_final += sub
             
     st.divider()
@@ -184,22 +176,27 @@ with st.container():
     st.metric("TOTAL PARA EL CLIENTE", f"${total_final:,.2f}")
     obs = st.text_area("Notas Técnicas / Dirección")
 
-st.markdown("### ✍️ Panel de Firmas")
+st.markdown("### ✍️ Panel de Firmas (Usa la Papelera para borrar)")
 f1, f2 = st.columns(2)
-with f1: canv_cli = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="cli")
-with f2: canv_prov = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="prov")
+with f1: 
+    # ACTIVAR BARRA DE HERRAMIENTAS (drawing_mode="freedraw")
+    canv_cli = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="cli", drawing_mode="freedraw", display_toolbar=True)
+    st.caption("Firma del Cliente")
+with f2: 
+    canv_prov = st_canvas(stroke_width=2, stroke_color="#000", background_color="#FFFFFF", height=150, width=300, key="prov", drawing_mode="freedraw", display_toolbar=True)
+    st.caption("Firma de Iván Ortiz")
 
 if st.button("🚀 GENERAR CONTRATO"):
     if canv_cli.image_data is not None and nom and tel:
         try:
             pdf_bytes = generar_pdf_io(nom, items_pdf, total_final, tipo_servicio, sub_mant, canv_cli.image_data, canv_prov.image_data, f_p, obs)
             b64 = base64.b64encode(pdf_bytes).decode()
-            # DESCARGA
             st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">📥 Descargar Contrato PDF</a>', unsafe_allow_html=True)
-            # BOTÓN WHATSAPP (AQUÍ ESTÁ LA ADICIÓN)
-            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por la {tipo_servicio}. Saludos."
+            
+            # BOTÓN WHATSAPP DINÁMICO
+            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio} ({sub_mant if tipo_servicio=='Mantenimiento' else ''})."
             url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 Compartir por WhatsApp</a>', unsafe_allow_html=True)
             st.success("✅ Documento generado.")
         except Exception as e: st.error(f"Error: {e}")
-    else: st.error("⚠️ Completa datos y firmas.")
+    else: st.error("⚠️ Completa Nombre, WhatsApp y ambas Firmas.")
