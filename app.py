@@ -3,7 +3,7 @@ import pandas as pd
 from streamlit_drawable_canvas import st_canvas
 from datetime import datetime, timedelta
 from fpdf import FPDF
-import base64, tempfile, os, urllib.parse, random
+import base64, tempfile, os, urllib.parse
 from PIL import Image
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
@@ -76,58 +76,56 @@ def numero_a_letras(numero):
     letras += convertir_999(resto)
     return f"{letras.strip()} PESOS {decimal:02d}/100 M.N."
 
-# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN CORREGIDO ----------------
-def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo_pct):
+# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN (SIMÉTRICO TIPO EXCEL) ----------------
+def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo_pct, folio):
     pdf = FPDF()
     pdf.add_page()
     hoy = datetime.now()
     
-    # Cuadro Rojo Superior para Logo
+    # BLOQUE 1: ENCABEZADO Y LOGO (Diseño Cuadriculado Excel)
     pdf.set_fill_color(164, 25, 25) 
-    pdf.rect(10, 10, 60, 25, 'F')
-    try: pdf.image('logo.png', 12, 12, 56, 21)
+    pdf.rect(10, 10, 50, 25, 'FD') # Cuadro de Logo
+    try: pdf.image('logo.png', 12, 12, 46, 21)
     except: pass
     
-    # Titulo Central
+    pdf.rect(60, 10, 80, 25, 'D') # Cuadro de Título
+    pdf.set_xy(60, 12)
     pdf.set_font('Arial', 'B', 22)
-    pdf.set_xy(75, 10)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(70, 10, 'COTIZACION', 0, 1, 'C')
+    pdf.cell(80, 8, 'COTIZACION', 0, 1, 'C')
     pdf.set_font('Arial', '', 8)
-    pdf.set_x(75)
-    pdf.cell(70, 4, 'Calle Alcatraz #206 Col. Tuzos', 0, 1, 'C')
-    pdf.set_x(75)
-    pdf.cell(70, 4, 'Email: iosecur.cctv@gmail.com   Tel: 7711648186', 0, 1, 'C')
+    pdf.set_x(60)
+    pdf.cell(80, 4, 'Calle Alcatraz #206 Col. Tuzos', 0, 1, 'C')
+    pdf.set_x(60)
+    pdf.cell(80, 4, 'Email: iosecur.cctv@gmail.com   Tel: 7711648186', 0, 1, 'C')
     
-    # Folio y Fecha
-    folio = str(random.randint(100, 9999))
-    pdf.set_xy(150, 12)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(20, 6, 'FOLIO', 1, 0, 'C')
+    pdf.rect(140, 10, 60, 25, 'D') # Cuadro de Folio general
+    pdf.set_xy(140, 12)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(30, 10, 'FOLIO', 1, 0, 'C')
     pdf.set_text_color(255, 0, 0)
-    pdf.cell(25, 6, folio, 1, 1, 'C')
+    pdf.cell(30, 10, str(folio), 1, 1, 'C')
     pdf.set_text_color(0, 0, 0)
-    pdf.set_x(150)
-    pdf.cell(20, 6, 'FECHA:', 1, 0, 'C')
-    pdf.cell(25, 6, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
+    pdf.set_xy(140, 22)
+    pdf.cell(30, 10, 'FECHA:', 1, 0, 'C')
+    pdf.cell(30, 10, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
     
-    # FORZAR COORDENADA Y PARA EVITAR QUE SE ENCIME AL LOGO
-    pdf.set_y(40)
+    pdf.set_y(38)
     
-    # Datos del Cliente
+    # BLOQUE 2: DATOS DEL CLIENTE CERRADOS EN CONTORNO
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
-    pdf.cell(0, 6, 'COTIZACION', 1, 1, 'C', True)
+    pdf.cell(190, 6, 'COTIZACION', 1, 1, 'C', True)
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', 'B', 8)
-    pdf.cell(15, 6, 'NOMBRE:', 'L,B', 0, 'L')
-    pdf.set_font('Arial', '', 8); pdf.cell(75, 6, cli, 'B,R', 0, 'L')
-    pdf.set_font('Arial', 'B', 8); pdf.cell(10, 6, 'TEL:', 'B', 0, 'L')
-    pdf.set_font('Arial', '', 8); pdf.cell(30, 6, tel, 'B,R', 0, 'L')
-    pdf.set_font('Arial', 'B', 8); pdf.cell(15, 6, 'EMAIL:', 'B', 0, 'L')
-    pdf.set_font('Arial', '', 8); pdf.cell(45, 6, email, 'B,R', 1, 'L')
+    pdf.cell(15, 6, 'NOMBRE:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(75, 6, cli, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8); pdf.cell(10, 6, 'TEL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 6, tel, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8); pdf.cell(15, 6, 'EMAIL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(45, 6, email, 1, 1, 'L')
     
-    pdf.ln(4)
+    pdf.ln(2)
     
-    # Tabla de Equipos
+    # BLOQUE 3: TABLA DE EQUIPOS SIMÉTRICA (Con filas vacías rellenadas como Excel)
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
     pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
     pdf.cell(115, 6, 'DESCRIPCION', 1, 0, 'C', True)
@@ -135,53 +133,60 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     pdf.cell(30, 6, 'SUBTOTAL', 1, 1, 'C', True)
     
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
-    for it in items:
-        pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
-        pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
-        unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
-        pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'C')
-        pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'C')
-        
-    pdf.ln(2)
+    min_rows = 18 # Filas para dar el aspecto robusto a la tabla
+    for i in range(max(min_rows, len(items))):
+        if i < len(items):
+            it = items[i]
+            pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
+            pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
+            unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
+            pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'R')
+            pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'R')
+        else:
+            pdf.cell(15, 6, '', 1, 0, 'C')
+            pdf.cell(115, 6, '', 1, 0, 'L')
+            pdf.cell(30, 6, '', 1, 0, 'R')
+            pdf.cell(30, 6, '', 1, 1, 'R')
+            
+    pdf.ln(0) 
     y_tot = pdf.get_y()
     
-    # Leyenda izquierda
-    pdf.set_xy(10, y_tot); pdf.set_font('Arial', '', 7)
+    # BLOQUE 4: LEYENDA Y TOTALES EN CUADRÍCULA
+    pdf.rect(10, y_tot, 130, 18) # Cuadro que envuelve la leyenda
+    pdf.set_xy(12, y_tot + 2); pdf.set_font('Arial', '', 7)
     txt_leyenda = "En IO Security, nos dedicamos a ofrecer soluciones integrales para satisfacer las necesidades de tu negocio. Contamos con un amplio catalogo de productos y servicios, todos ellos cuidadosamente seleccionados para brindarte el mejor rendimiento y valor."
-    pdf.multi_cell(115, 4, txt_leyenda, border=1)
+    pdf.multi_cell(126, 4, txt_leyenda, border=0)
     
-    # CALCULOS DE IVA Y TOTAL
     monto_iva = total_base * (iva_pct / 100.0)
     total_final = total_base + monto_iva
 
-    # Totales derecha
-    pdf.set_xy(125, y_tot); pdf.set_font('Arial', 'B', 8)
-    pdf.cell(35, 5, 'SUBTOTAL:', 1, 0, 'R')
-    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total_base:,.2f}", 1, 1, 'C')
-    pdf.set_x(125); pdf.set_font('Arial', 'B', 8)
-    pdf.cell(35, 5, 'IMPUESTOS:', 1, 0, 'R')
-    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {monto_iva:,.2f}", 1, 1, 'C')
-    pdf.set_x(125); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(255,0,0)
-    pdf.cell(35, 5, 'TOTAL:', 1, 0, 'R')
-    pdf.set_text_color(0,0,0); pdf.set_font('Arial', 'B', 8); pdf.cell(30, 5, f"$ {total_final:,.2f}", 1, 1, 'C')
+    pdf.set_xy(140, y_tot); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(25, 6, 'SUBTOTAL:', 1, 0, 'R')
+    pdf.set_font('Arial', '', 8); pdf.cell(35, 6, f"$ {total_base:,.2f}", 1, 1, 'R')
+    pdf.set_x(140); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(25, 6, 'IMPUESTOS:', 1, 0, 'R')
+    pdf.set_font('Arial', '', 8); pdf.cell(35, 6, f"$ {monto_iva:,.2f}", 1, 1, 'R')
+    pdf.set_x(140); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(255,0,0)
+    pdf.cell(25, 6, 'TOTAL:', 1, 0, 'R')
+    pdf.set_text_color(0,0,0); pdf.set_font('Arial', 'B', 8); pdf.cell(35, 6, f"$ {total_final:,.2f}", 1, 1, 'R')
     
-    # Pie de pagina de Cotización (CANTIDAD CON LETRA AGREGADA)
-    pdf.set_y(max(pdf.get_y(), y_tot + 18))
+    # BLOQUE 5: LETRA, PAGO Y CONSIDERACIONES CERRADAS
+    pdf.set_y(y_tot + 18)
     pdf.set_font('Arial', 'B', 8)
-    pdf.cell(0, 5, f'CANTIDAD CON LETRA: {numero_a_letras(total_final)}', 0, 1, 'L')
-    pdf.cell(40, 5, 'METODO DE PAGO:', 0, 0, 'L')
+    pdf.cell(190, 6, f'CANTIDAD CON LETRA: {numero_a_letras(total_final)}', 'L,T,R', 1, 'L')
+    pdf.cell(40, 6, 'METODO DE PAGO:', 'L,B', 0, 'L')
     pdf.set_font('Arial', '', 8)
-    pdf.cell(30, 5, '[   ] EFECTIVO', 0, 0, 'C')
-    pdf.cell(30, 5, '[   ] TARJETA', 0, 0, 'C')
-    pdf.cell(30, 5, '[   ] OTRO:', 0, 1, 'C')
+    pdf.cell(40, 6, '[   ] EFECTIVO', 'B', 0, 'C')
+    pdf.cell(40, 6, '[   ] TARJETA', 'B', 0, 'C')
+    pdf.cell(70, 6, '[   ] OTRO:', 'B,R', 1, 'L')
     
-    # CONSIDERACIONES MODIFICADAS CON TEXTO REQUERIDO Y PORCENTAJE
-    pdf.ln(3)
+    pdf.ln(2)
     pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
-    pdf.cell(0, 6, 'CONSIDERACIONES', 1, 1, 'C', True)
+    pdf.cell(190, 6, 'CONSIDERACIONES', 1, 1, 'C', True)
     pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
     txt_cons = f"Cotizacion con 20 dias de validez, a partir de la fecha elaborada. Se requiere de un anticipo del {anticipo_pct}% antes de la fecha de inicio de instalacion."
-    pdf.multi_cell(0, 6, txt_cons, 1, 'L')
+    pdf.cell(190, 6, txt_cons, 'L,R', 1, 'L')
+    pdf.cell(190, 15, '', 'L,B,R', 1) # Cuadro cerrado abajo
     
     return pdf.output(dest='S').encode('latin-1')
 # --------------------------------------------------------------------------------
@@ -311,8 +316,9 @@ with st.container():
         m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
         m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0)
         
-        # AGREGADOS DE COTIZACIÓN (SOLO VISIBLES SI ELIGES COTIZACIÓN)
+        # AGREGADOS DE COTIZACIÓN
         if tipo == "Cotización":
+            folio_input = st.text_input("📝 NÚMERO DE FOLIO", value="001")
             iva_sel = st.selectbox("¿Agregar IVA (16%)?", ["NO", "SÍ"])
             iva_pct = 16 if iva_sel == "SÍ" else 0
             anticipo_sel = st.selectbox("Porcentaje de Anticipo:", ["50", "60", "70", "80", "100"])
@@ -375,12 +381,12 @@ with st.container():
     else:
         st.divider(); st.metric("VALOR TOTAL", f"${total_final:,.2f}")
 
-# LÓGICA DE BOTONES SEPARADA PARA NO ROMPER NADA
+# LÓGICA DE BOTONES SEPARADA
 if tipo == "Cotización":
     if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
         if nom:
             try:
-                pdf_b = generar_pdf_cotizacion(nom, items_pdf, total_final, tel, email_input, iva_pct, anticipo_sel)
+                pdf_b = generar_pdf_cotizacion(nom, items_pdf, total_final, tel, email_input, iva_pct, anticipo_sel, folio_input)
                 st.markdown(f"<div class='success-box'>📝 SISTEMA: COTIZACIÓN CREADA CON ÉXITO.</div>", unsafe_allow_html=True)
                 st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Cotizacion_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR COTIZACIÓN</a>', unsafe_allow_html=True)
                 msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le adjunto su cotizacion en formato PDF. Quedo a sus ordenes.")
