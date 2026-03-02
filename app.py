@@ -3,7 +3,7 @@ import pandas as pd
 from streamlit_drawable_canvas import st_canvas
 from datetime import datetime, timedelta
 from fpdf import FPDF
-import base64, tempfile, os, urllib.parse
+import base64, tempfile, os, urllib.parse, random
 from PIL import Image
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
@@ -44,7 +44,109 @@ URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9u
 try: df_cat = pd.read_csv(URL_CSV); df_cat.columns = df_cat.columns.str.strip()
 except: st.error("⚠️ ERROR DE RED"); st.stop()
 
-# 3. GENERADOR DE PDF CON TEXTO LITERAL EXACTO 
+# ---------------- NUEVO MÓDULO: GENERADOR DE COTIZACIÓN TIPO EXCEL ----------------
+def generar_pdf_cotizacion(cli, items, total, tel, email):
+    pdf = FPDF()
+    pdf.add_page()
+    hoy = datetime.now()
+    
+    # Cuadro Rojo Superior para Logo
+    pdf.set_fill_color(164, 25, 25) 
+    pdf.rect(10, 10, 60, 25, 'F')
+    try: pdf.image('logo.png', 12, 12, 56)
+    except: pass
+    
+    # Titulo Central
+    pdf.set_font('Arial', 'B', 22)
+    pdf.set_xy(75, 10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(70, 10, 'COTIZACION', 0, 1, 'C')
+    pdf.set_font('Arial', '', 8)
+    pdf.set_x(75)
+    pdf.cell(70, 4, 'Calle Alcatraz #206 Col. Tuzos', 0, 1, 'C')
+    pdf.set_x(75)
+    pdf.cell(70, 4, 'Email: iosecur.cctv@gmail.com   Tel: 7711648186', 0, 1, 'C')
+    
+    # Folio y Fecha
+    folio = str(random.randint(100, 9999))
+    pdf.set_xy(150, 12)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(20, 6, 'FOLIO', 1, 0, 'C')
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(25, 6, folio, 1, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_x(150)
+    pdf.cell(20, 6, 'FECHA:', 1, 0, 'C')
+    pdf.cell(25, 6, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
+    
+    pdf.ln(10)
+    
+    # Datos del Cliente
+    pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
+    pdf.cell(0, 6, 'COTIZACION', 1, 1, 'C', True)
+    pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'NOMBRE:', 'L,B', 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(75, 6, cli, 'B,R', 0, 'L')
+    pdf.set_font('Arial', 'B', 8); pdf.cell(10, 6, 'TEL:', 'B', 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 6, tel, 'B,R', 0, 'L')
+    pdf.set_font('Arial', 'B', 8); pdf.cell(15, 6, 'EMAIL:', 'B', 0, 'L')
+    pdf.set_font('Arial', '', 8); pdf.cell(45, 6, email, 'B,R', 1, 'L')
+    
+    pdf.ln(4)
+    
+    # Tabla de Equipos
+    pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
+    pdf.cell(115, 6, 'DESCRIPCION', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'COSTO UNIT', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'SUBTOTAL', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
+    for it in items:
+        pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
+        pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
+        unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
+        pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'C')
+        pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'C')
+        
+    pdf.ln(2)
+    y_tot = pdf.get_y()
+    
+    # Leyenda izquierda
+    pdf.set_xy(10, y_tot); pdf.set_font('Arial', '', 7)
+    txt_leyenda = "En IO Security, nos dedicamos a ofrecer soluciones integrales para satisfacer las necesidades de tu negocio. Contamos con un amplio catalogo de productos y servicios, todos ellos cuidadosamente seleccionados para brindarte el mejor rendimiento y valor."
+    pdf.multi_cell(115, 4, txt_leyenda, border=1)
+    
+    # Totales derecha
+    pdf.set_xy(125, y_tot); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(35, 5, 'SUBTOTAL:', 1, 0, 'R')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total:,.2f}", 1, 1, 'C')
+    pdf.set_x(125); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(35, 5, 'IMPUESTOS:', 1, 0, 'R')
+    pdf.set_font('Arial', '', 8); pdf.cell(30, 5, "$ 0.00", 1, 1, 'C')
+    pdf.set_x(125); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(255,0,0)
+    pdf.cell(35, 5, 'TOTAL:', 1, 0, 'R')
+    pdf.set_text_color(0,0,0); pdf.set_font('Arial', '', 8); pdf.cell(30, 5, f"$ {total:,.2f}", 1, 1, 'C')
+    
+    # Pie de pagina de Cotización
+    pdf.ln(8); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(0, 5, 'CANTIDAD CON LETRA:', 0, 1, 'L')
+    pdf.cell(40, 5, 'METODO DE PAGO:', 0, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(30, 5, '[   ] EFECTIVO', 0, 0, 'C')
+    pdf.cell(30, 5, '[   ] TARJETA', 0, 0, 'C')
+    pdf.cell(30, 5, '[   ] OTRO:', 0, 1, 'C')
+    
+    pdf.ln(3)
+    pdf.set_fill_color(164, 25, 25); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 8)
+    pdf.cell(0, 6, 'CONSIDERACIONES', 1, 1, 'C', True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 20, '', 1, 1) # Cuadro vacio
+    
+    return pdf.output(dest='S').encode('latin-1')
+# --------------------------------------------------------------------------------
+
+# 3. GENERADOR DE PDF CON TEXTO LITERAL EXACTO PARA CONTRATOS (INTACTO)
 def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -52,7 +154,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     meses_txt = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     empresa_full = "IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD"
 
-    # ENCABEZADO
     pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, empresa_full, ln=True, align='C')
     pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f"Fecha de Emision: {hoy.day} de {meses_txt[hoy.month-1]} de {hoy.year}", ln=True, align='R')
     pdf.ln(5)
@@ -62,7 +163,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     pdf.ln(32) 
 
     if tipo == "Servicio IO Prevent":
-        # CONTRATO IO PREVENT
         pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE PRESTACION DE SERVICIO: "IO PREVENT"', ln=True, align='C')
         pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f"FECHA: {hoy.day} de {meses_txt[hoy.month-1]} del {hoy.year} LUGAR: Pachuca de Soto/Hidalgo.", ln=True, align='R'); pdf.ln(5)
         pdf.set_font('Arial', 'B', 10); pdf.cell(0, 7, "REUNIDOS", ln=True); pdf.set_font('Arial', '', 10)
@@ -88,16 +188,13 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CUARTA: EXCLUSIONES", ln=True); pdf.set_font('Arial', '', 9)
         pdf.multi_cell(0, 4.5, "No incluye visitas fisicas ni refacciones. Visita fisica de emergencia: $200.00 MXN."); pdf.ln(1)
         
-        # MODIFICACIÓN IO PREVENT: CÁLCULO DE PAGOS SEMESTRALES O ANUALES
         pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "SEPTIMA: HONORARIOS", ln=True); pdf.set_font('Arial', 'B', 10)
         if periodo == "Semestral":
-            pago_dividido = total / 2
-            pdf.cell(0, 7, f"El costo total es de ${total:,.2f} MXN, cubierto en dos pagos semestrales de ${pago_dividido:,.2f} MXN.", ln=True)
+            pdf.cell(0, 7, f"El costo total es de ${total:,.2f} MXN, cubierto en dos pagos semestrales de ${(total/2):,.2f} MXN.", ln=True)
         else:
             pdf.cell(0, 7, f"El costo total es de ${total:,.2f} MXN, cubierto en un pago anual de ${total:,.2f} MXN.", ln=True)
 
     else:
-        # CONTRATO INSTALACIÓN / MANTENIMIENTO CON TEXTO EXACTO DE IVÁN
         tit_pdf = f"Contrato de Prestacion de Servicios de {tipo if tipo != 'Mantenimiento' else 'Mantenimiento ' + sub_m}"
         pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, tit_pdf, ln=True, align='C'); pdf.ln(5)
         
@@ -150,7 +247,6 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.multi_cell(0, 4.5, "Para la interpretacion y cumplimiento de este contrato, las partes se someten a la jurisdiccion de los tribunales de la ciudad de Mineral de la reforma Hgo, renunciando a cualquier otro fuero que pudiera corresponderles por razon de sus domicilios presentes o futuros.")
         pdf.ln(5)
 
-    # CIERRE COMÚN DE FIRMAS
     pdf.set_font('Arial', 'I', 10)
     pdf.multi_cell(0, 5, f"Ambas partes leyeron este contrato, entienden su contenido y lo firman de conformidad en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses_txt[hoy.month-1]} del año {hoy.year}.")
     if f_c_img is not None:
@@ -162,15 +258,16 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 8); pdf.cell(95, 7, 'NOMBRE Y FIRMA DEL CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, f'IVAN ORTIZ ({empresa_full})', 0, 1, 'C')
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. INTERFAZ OPERATIVA Y PRORRATEO (INTACTOS)
+# 4. INTERFAZ OPERATIVA Y PRORRATEO (INTACTOS + MÓDULO COTIZACIÓN)
 st.sidebar.title("🛡️ CONTROL IO")
-tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"])
+tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
 
 with st.container():
     c1, c2 = st.columns(2)
     with c1:
         nom = st.text_input("👤 CLIENTE"); tel = st.text_input("📞 WHATSAPP (10 DIG)"); f_p = st.date_input("📅 FECHA")
+        email_input = st.text_input("📧 EMAIL DEL CLIENTE") if tipo == "Cotización" else ""
     with c2:
         m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
         m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0)
@@ -191,7 +288,6 @@ with st.container():
     elif tipo == "Mantenimiento":
         with st.expander("🛠️ CONFIGURACIÓN MANTENIMIENTO", expanded=True):
             col1, col2 = st.columns(2)
-            # MODIFICACIÓN: PRECIOS PREDETERMINADOS REMOVIDOS (value=0.0)
             c_m = col1.number_input("Cámaras", 0); p_m = col1.number_input("Precio Mant unitario $", min_value=0.0, value=0.0)
             c_b = col1.number_input("Pares Baluns", 0); p_b = col1.number_input("Precio Par $", min_value=0.0, value=0.0)
             sel_d = col2.selectbox("Tipo DVR", ["4 Can", "8 Can", "16 Can", "Placa Madre"])
@@ -213,9 +309,9 @@ with st.container():
             v_d = round(p_d_mnt+(ex if f"Limpieza {sel_d}" in m_prorr else 0), 2)
             items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica {sel_d}", "Subtotal_Final": v_d}); total_final += v_d
 
-    elif m_sel:
-        with st.expander("📋 PRORRATEO MATERIALES", expanded=True):
-            m_gan = st.multiselect("💰 SELECCIONAR EQUIPOS PARA GANANCIA:", m_sel)
+    elif m_sel: # ESTO APLICA PERFECTAMENTE PARA INSTALACIÓN Y COTIZACIÓN
+        with st.expander("📋 CONFIGURAR EQUIPOS Y CANTIDADES", expanded=True):
+            m_gan = st.multiselect("💰 CARGAR GANANCIA / MANO DE OBRA EN:", m_sel)
             temp = {}; t_u = 0
             for p in m_sel:
                 q = st.number_input(f"Cant. {p}", 1, key=f"q_{p}"); temp[p] = q
@@ -233,13 +329,26 @@ f1, f2 = st.columns(2)
 with f1: c_cli = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="cli", display_toolbar=True)
 with f2: c_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
 
-if st.button("🚀 FINALIZAR Y GENERAR EXPEDIENTE"):
-    if c_cli.image_data is not None and nom and dom_input:
-        try:
-            pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, sub_m, periodo_io, tec_io, n_cam_io, can_io, c_cli.image_data, c_prov.image_data, f_p, dom_input, notas_input)
-            st.markdown(f"<div class='success-box'>🔒 SISTEMA: CONTRATO DE {tipo.upper()} GENERADO CON ÉXITO.</div>", unsafe_allow_html=True)
-            st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
-            msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmo la generacion de su contrato. Adjunto PDF.")
-            st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
-        except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
-    else: st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")
+# LÓGICA DE BOTONES SEPARADA PARA NO ROMPER NADA
+if tipo == "Cotización":
+    if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
+        if nom:
+            try:
+                pdf_b = generar_pdf_cotizacion(nom, items_pdf, total_final, tel, email_input)
+                st.markdown(f"<div class='success-box'>📝 SISTEMA: COTIZACIÓN CREADA CON ÉXITO.</div>", unsafe_allow_html=True)
+                st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Cotizacion_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR COTIZACIÓN</a>', unsafe_allow_html=True)
+                msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le adjunto su cotizacion en formato PDF. Quedo a sus ordenes.")
+                st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
+            except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
+        else: st.error("⚠️ REQUERIDO: Nombre del cliente.")
+else:
+    if st.button("🚀 FINALIZAR Y GENERAR EXPEDIENTE"):
+        if c_cli.image_data is not None and nom and dom_input:
+            try:
+                pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, sub_m, periodo_io, tec_io, n_cam_io, can_io, c_cli.image_data, c_prov.image_data, f_p, dom_input, notas_input)
+                st.markdown(f"<div class='success-box'>🔒 SISTEMA: CONTRATO DE {tipo.upper()} GENERADO CON ÉXITO.</div>", unsafe_allow_html=True)
+                st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
+                msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmo la generacion de su contrato. Adjunto PDF.")
+                st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
+            except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
+        else: st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")
