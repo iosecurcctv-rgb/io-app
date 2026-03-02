@@ -1,0 +1,6 @@
+streamlit
+streamlit-gsheets-connection
+streamlit-drawable-canvas
+fpdf
+Pillow
+pandas
