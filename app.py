@@ -10,10 +10,10 @@ import urllib.parse
 import tempfile
 import os
 
-# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (CARGA TU LOGO COMO ICONO DE APP)
+# 1. CONFIGURACIÓN E IDENTIDAD VISUAL (CARGA TU LOGO COMO ICONO DE ACCESO DIRECTO)
 st.set_page_config(
     page_title="IO SECURITY - Control Maestro", 
-    page_icon="logo.png", # <--- Tu logo ahora es el icono oficial
+    page_icon="logo.png", # <--- Tu logo ahora aparecerá como icono en el celular
     layout="wide"
 )
 
@@ -45,7 +45,7 @@ except Exception as e:
     st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN GENERADORA DE PDF (CON TÍTULO DINÁMICO Y GARANTÍA 6 MESES)
+# 3. FUNCIÓN GENERADORA DE PDF (CORREGIDA CON REDONDEO Y TÍTULOS)
 def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -196,7 +196,8 @@ if st.button("🚀 GENERAR CONTRATO"):
             b64 = base64.b64encode(pdf_bytes).decode()
             st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Contrato_{nom}.pdf" class="download-btn">📥 Descargar Contrato PDF</a>', unsafe_allow_html=True)
             
-            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio} ({sub_mant if tipo_servicio=='Mantenimiento' else ''})."
+            # BOTÓN WHATSAPP DINÁMICO
+            msg = f"Hola {nom}, soy Ivan de IO SECURITY. Te envio tu contrato por el servicio de {tipo_servicio} ({sub_mant if tipo_servicio=='Mantenimiento' else ''}). Saludos."
             url_wa = f"https://wa.me/52{tel}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 Compartir por WhatsApp</a>', unsafe_allow_html=True)
             st.success("✅ Documento generado.")
