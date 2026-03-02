@@ -6,15 +6,10 @@ from fpdf import FPDF
 import base64, tempfile, os, urllib.parse
 from PIL import Image
 
-# 1. CONFIGURACIÓN E IDENTIDAD (ICONO FORZADO V3 + ALTA VISIBILIDAD)
-st.set_page_config(page_title="IO SECURITY - Control Maestro", page_icon="logo.png", layout="wide")
+# 1. CONFIGURACIÓN E IDENTIDAD TECNOLÓGICA (ICONO FORZADO V3)
+st.set_page_config(page_title="IO SECURITY", page_icon="logo.png", layout="wide")
 
 st.markdown("""
-    <head>
-        <link rel="apple-touch-icon" href="logo.png?v=3">
-        <link rel="icon" type="image/png" href="logo.png?v=3">
-        <link rel="shortcut icon" href="logo.png?v=3">
-    </head>
     <style>
     .stApp { background-color: #0B0E14; color: #FFFFFF; font-family: 'Inter', sans-serif; }
     h1, h2, h3 { color: #00FF7F !important; text-shadow: 0 0 10px rgba(0, 255, 127, 0.4); font-weight: 800 !important; }
@@ -27,7 +22,6 @@ st.markdown("""
         width: 100%; border-radius: 15px; height: 5em; background: linear-gradient(135deg, #1F2937 0%, #0B0E14 100%);
         color: #00FF7F; border: 2px solid #00FF7F; font-weight: bold; font-size: 24px; transition: 0.3s all;
     }
-    .stButton>button:hover { box-shadow: 0 0 20px #00FF7F; background-color: #00FF7F; color: #111418; }
     .success-box { padding: 25px; border-radius: 15px; background: rgba(0, 255, 127, 0.1); border: 2px solid #00FF7F; color: #FFFFFF; text-align: center; margin: 20px 0; font-size: 22px; font-weight: bold; }
     .whatsapp-btn { display: inline-block; padding: 22px; border-radius: 15px; color: white !important; background-color: #2E7D32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 15px; font-size: 24px; border: 2px solid #FFFFFF; }
     .download-btn { display: inline-block; padding: 22px; border-radius: 15px; color: white !important; background-color: #0277BD; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 15px; border: 2px solid #FFFFFF; font-size: 24px; }
@@ -45,85 +39,78 @@ URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRopR4hg_DfWvNF919M9u
 try: df_catalogo = pd.read_csv(URL_CSV); df_catalogo.columns = df_catalogo.columns.str.strip() 
 except: st.error("⚠️ ERROR DE CONEXIÓN"); st.stop()
 
-# 3. GENERADOR DE PDF CON CLÁUSULAS COMPLETAS
-def generar_pdf_io(cliente, items, total, tipo, periodo, tec, n_cam, canales, f_cli, f_prov, f_p, notas):
+# 3. GENERADOR DE PDF BLINDADO (SIN ETIQUETAS DE DISEÑO)
+def generar_pdf_io(cliente, items, total, tipo, periodicidad, tec, n_cam, canales, f_cli, f_prov, f_p, notas):
     pdf = FPDF()
     pdf.add_page()
     try: pdf.image('logo.png', 10, 8, 40)
     except: pdf.set_font('Arial', 'B', 16); pdf.cell(0, 10, 'IO SECURITY', ln=True)
     
+    hoy = datetime.now()
+    meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
     if tipo == "Servicio IO Prevent":
-        # CONTRATO IO PREVENT COMPLETO
-        pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE SOPORTE TECNICO REMOTO', ln=True, align='R')
-        pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f'Lugar: Pachuca de Soto, Hidalgo. Fecha: {datetime.now().strftime("%d/%m/%Y")}', ln=True, align='R'); pdf.ln(10)
-        
+        pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE SOPORTE TECNICO REMOTO', ln=True, align='C')
+        pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f'FECHA: {hoy.day} de {meses[hoy.month-1]} del {hoy.year} LUGAR: Pachuca de Soto, Hidalgo.', ln=True, align='R'); pdf.ln(5)
         pdf.set_font('Arial', 'B', 10); pdf.cell(0, 7, "REUNIDOS", ln=True); pdf.set_font('Arial', '', 9)
-        pdf.multi_cell(0, 5, f"De una parte, IO SECURITY ('EL PRESTADOR'). Y de otra parte, {cliente} ('EL CLIENTE'). Ambas partes acuerdan celebrar el presente contrato para un sistema de {n_cam} camaras {tec} con grabador de {canales}.")
+        pdf.multi_cell(0, 5, f"De una parte, IO SECURITY, en adelante 'EL PRESTADOR'. Y de otra parte, {cliente}, en adelante 'EL CLIENTE'. Ambas partes acuerdan celebrar el presente CONTRATO DE SOPORTE TECNICO REMOTO para un sistema de {n_cam} camaras {tec} con grabador de {canales}.")
         
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "PRIMERA: OBJETO DEL SERVICIO", ln=True)
-        pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4.5, "Asistencia tecnica y monitoreo de salud del sistema de videovigilancia de manera exclusivamente remota.")
-        
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "SEGUNDA: VIGENCIA", ln=True)
-        meses_v = 6 if periodo == "Semestral" else 12
-        f_fin = f_p + timedelta(days=30*meses_v)
-        pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4.5, f"Duracion modalidad {periodo.upper()}. Inicio: {f_p.strftime('%d/%m/%Y')} - Termino: {f_fin.strftime('%d/%m/%Y')}")
-
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "TERCERA: ALCANCE TECNICO LIMITADO", ln=True)
-        pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 4, "1) Verificacion de Grabacion y Salud del Disco Duro mensual. 2) Soporte y Configuracion de Aplicacion Movil (Hasta 4 dispositivos).")
-
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CUARTA: EXCLUSIONES", ln=True)
-        pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 4, "No incluye visitas fisicas, limpieza, cableado o refacciones. Visita física de emergencia: $200.00 MXN.")
-
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "SEXTA: CONFIDENCIALIDAD Y ACCESO", ln=True)
-        pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 4, "Acceso remoto limitado estrictamente a diagnostico. No se realizara monitoreo de video en vivo sin autorizacion.")
-        
-        pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "SEPTIMA: HONORARIOS", ln=True)
-        pdf.set_font('Arial', 'B', 10); pdf.cell(0, 7, f"COSTO TOTAL: ${total:,.2f} MXN (Pago en una sola exhibicion).", ln=True)
-
+        c_prevent = [
+            ("PRIMERA: OBJETO DEL SERVICIO", "Prestacion de servicios de asistencia tecnica y monitoreo de salud del sistema de videovigilancia de manera exclusivamente remota."),
+            ("SEGUNDA: VIGENCIA", f"Modalidad {periodicidad.upper()}. Inicio: {f_p.strftime('%d/%m/%Y')}."),
+            ("TERCERA: ALCANCE TECNICO LIMITADO", "1) Verificacion de Grabacion y Salud del Disco Duro mensual. 2) Soporte y Configuracion de Aplicacion Movil (Hasta 4 dispositivos)."),
+            ("CUARTA: EXCLUSIONES", "No incluye visitas fisicas, limpieza o refacciones. Visita física de emergencia: $200.00 MXN."),
+            ("SEXTA: CONFIDENCIALIDAD", "Acceso remoto limitado estrictamente a tareas de diagnostico. No se realizara monitoreo en vivo sin peticion expresa."),
+            ("SEPTIMA: HONORARIOS", f"Costo total por el servicio {periodicidad}: ${total:,.2f} MXN, pagaderos en una sola exhibicion.")
+        ]
+        for t, txt in c_prevent:
+            pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, t, ln=True); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt); pdf.ln(1)
     else:
-        # CONTRATO INSTALACIÓN / MANTENIMIENTO CON CLÁUSULAS
-        gar = "6 meses" if tipo == "Mantenimiento" else "8 meses"
-        pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE PRESTACION DE SERVICIOS', ln=True, align='R'); pdf.ln(8)
-        pdf.set_font('Arial', 'B', 11); pdf.cell(0, 7, f"{tipo.upper()}", ln=True, align='C'); pdf.ln(4)
-        pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 5, f"Contrato entre IO SECURITY y {cliente}."); pdf.ln(2)
+        pdf.set_font('Arial', 'B', 12); pdf.cell(0, 10, 'CONTRATO DE PRESTACION DE SERVICIOS DE INSTALACION', ln=True, align='C'); pdf.ln(5)
+        pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, IO SECURITY ('EL PRESTADOR'), y por la otra, {cliente} ('EL CLIENTE').")
         
+        pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA PRIMERA: OBJETO DEL CONTRATO", ln=True)
+        pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"EL PRESTADOR se compromete a instalar y poner en funcionamiento un sistema de CCTV en el domicilio de EL CLIENTE. Los equipos se detallan a continuacion:"); pdf.ln(2)
+
         pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
-        pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion', 1, 0, 'L', True); pdf.cell(50, 8, 'Total', 1, 1, 'C', True)
+        pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True); pdf.cell(120, 8, ' Descripcion del Servicio / Insumos', 1, 0, 'L', True); pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
         pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
         for it in items:
             pdf.cell(20, 9, f" {it['Cantidad']}", 1, 0, 'C'); pdf.cell(120, 9, f" {it['Concepto']}", 1); pdf.cell(50, 9, f"$ {it['Subtotal_Final']:,.2f} ", 1, 1, 'R')
-        pdf.set_font('Arial', 'B', 10); pdf.cell(140, 9, ' TOTAL NETO', 1, 0, 'L'); pdf.cell(50, 9, f"$ {total:,.2f} ", 1, 1, 'R'); pdf.ln(5)
-        
+        pdf.set_font('Arial', 'B', 10); pdf.cell(140, 9, ' TOTAL NETO A PAGAR', 1, 0, 'L'); pdf.cell(50, 9, f"$ {total:,.2f} ", 1, 1, 'R'); pdf.ln(5)
+
+        gar = "6 meses" if tipo == "Mantenimiento" else "8 meses"
         clausulas = [
-            ("CLAUSULA DE GARANTIAS", f"Refacciones: {gar}. Mano de Obra: 4 meses."),
-            ("PROCESO DE GARANTIA", "Reportar al 7711648186. Visita tecnica en maximo 72 horas habiles."),
-            ("ANULACION", "Se anula por variaciones de voltaje, vandalismo o manipulacion externa."),
-            ("VISITAS EXTRA", "Visitas fuera de garantia: $250.00 MXN.")
+            ("CLAUSULA TERCERA: GARANTIAS", f"Equipos: {gar}. Mano de Obra: 4 meses."),
+            ("CLAUSULA CUARTA: PROCESO", "Reportes al 7711648186. Visita tecnica en maximo 72 horas habiles."),
+            ("CLAUSULA QUINTA: ANULACION", "Se anula por variaciones de voltaje, manipulacion externa, daño fisico o desastres naturales."),
+            ("CLAUSULA SEXTA: COSTOS ADICIONALES", "Visitas no cubiertas por garantia tendran un costo de $250.00 MXN."),
+            ("CLAUSULA SEPTIMA: JURISDICCION", "Las partes se someten a los tribunales de Mineral de la Reforma, Hgo.")
         ]
         for t, txt in clausulas:
             pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, t, ln=True); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt); pdf.ln(1)
 
-    pdf.ln(5); pdf.set_font('Arial', 'I', 8); pdf.cell(0, 5, "Ambas partes firman de conformidad en Pachuca de Soto, Hidalgo.", ln=True)
+    pdf.ln(5); pdf.set_font('Arial', 'I', 8); pdf.cell(0, 5, f"Ambas partes firman de conformidad en Mineral de la Reforma, a los {hoy.day} dias de {meses[hoy.month-1]} de {hoy.year}.", ln=True)
     if f_cli is not None:
         y_f = pdf.get_y() + 5
         def g_t(d):
             img = Image.fromarray(d.astype('uint8'), 'RGBA'); t = tempfile.NamedTemporaryFile(delete=False, suffix=".png"); img.save(t.name); return t.name
         p1 = g_t(f_cli); p2 = g_t(f_prov)
         pdf.image(p1, 30, y_f, 50, 20); pdf.image(p2, 130, y_f, 50, 20); os.unlink(p1); os.unlink(p2)
-        pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 9); pdf.cell(95, 7, 'EL CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, 'IVAN ORTIZ (IO SECURITY)', 0, 1, 'C')
+        pdf.set_y(y_f + 22); pdf.set_font('Arial', 'B', 9); pdf.cell(95, 7, 'NOMBRE Y FIRMA DEL CONTRATANTE', 0, 0, 'C'); pdf.cell(95, 7, 'NOMBRE Y FIRMA DEL PRESTADOR', 0, 1, 'C')
     return pdf.output(dest='S').encode('latin-1')
 
-# 4. INTERFAZ
+# 4. INTERFAZ OPERATIVA
 st.sidebar.title("🛡️ OPERACIONES IO")
 tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"])
 
 with st.container():
     c1, c2 = st.columns(2)
     with c1:
-        nom = st.text_input("👤 CLIENTE"); tel = st.text_input("📞 WHATSAPP (10 DIG)"); f_p = st.date_input("📅 FECHA")
+        nom = st.text_input("👤 CLIENTE"); tel = st.text_input("📞 WHATSAPP (10 DIGITOS)"); f_p = st.date_input("📅 FECHA INICIO")
     with c2:
         m_sel = st.multiselect("📦 MATERIALES:", df_catalogo['Producto'].tolist()) if tipo != "Servicio IO Prevent" else []
-        m_total = st.number_input("💵 COSTO ADICIONAL / GANANCIA ($)", min_value=0.0, value=0.0)
+        m_total = st.number_input("💵 GANANCIA / MANO DE OBRA ($)", min_value=0.0)
 
     items_pdf = []; total_final = 0.0; tec_io = ""; n_cam_io = 0; canales_io = ""
     periodo_io = st.sidebar.selectbox("Periodicidad:", ["Semestral", "Anual"]) if tipo == "Servicio IO Prevent" else ""
@@ -165,22 +152,22 @@ with st.container():
                 sub = round((base + (ex_i if p in m_gan else 0)) * q, 2)
                 items_pdf.append({"Cantidad": q, "Concepto": p, "Subtotal_Final": sub}); total_final += sub
             
-    st.divider(); st.metric("VALOR TOTAL", f"${total_final:,.2f}")
-    obs = st.text_area("📝 NOTAS")
+    st.divider(); st.metric("VALOR FINAL DEL CONTRATO", f"${total_final:,.2f}")
+    obs = st.text_area("📝 NOTAS ADICIONALES")
 
-st.markdown("### ✍️ FIRMAS (FONDO BLANCO)")
+st.markdown("### ✍️ SECCIÓN DE FIRMAS DIGITALES")
 f1, f2 = st.columns(2)
-# FONDO BLANCO PARA QUE SE VEA EL TRAZO
 with f1: canv_cli = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="cli", display_toolbar=True)
 with f2: canv_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
 
-if st.button("🚀 GENERAR EXPEDIENTE FINAL"):
+if st.button("🚀 FINALIZAR Y GENERAR CONTRATO"):
     if canv_cli.image_data is not None and nom and tel:
         try:
             pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, periodo_io, tec_io, n_cam_io, canales_io, canv_cli.image_data, canv_prov.image_data, f_p, obs)
             st.markdown(f"""<div class='success-box'>🔒 SISTEMA: CONTRATO DE {tipo.upper()} GENERADO CON ÉXITO.<br>Expediente de {nom} listo para envío seguro.</div>""", unsafe_allow_html=True)
-            st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR PDF</a>', unsafe_allow_html=True)
-            msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmamos la generacion de su contrato {tipo}. Adjunto el archivo PDF.")
+            st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO PDF</a>', unsafe_allow_html=True)
+            msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmamos la generacion de su contrato {tipo}. Adjunto el PDF del servicio.")
             st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
         except Exception as e: st.error(f"ERROR: {e}")
-    else: st.error("⚠️ DATOS INCOMPLETOS")
+    else: st.error("⚠️ DATOS INCOMPLETOS: Nombre, Teléfono y ambas Firmas son obligatorios.")
+    
