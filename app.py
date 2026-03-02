@@ -17,7 +17,12 @@ st.set_page_config(
     layout="wide"
 )
 
+# Inyectar metadatos para forzar el icono en dispositivos móviles
 st.markdown("""
+    <head>
+        <link rel="apple-touch-icon" href="logo.png">
+        <link rel="shortcut icon" href="logo.png">
+    </head>
     <style>
     .stApp { background-color: #111418; color: #D1D5DB; }
     h1, h2, h3 { color: #50C878 !important; font-family: 'Segoe UI', sans-serif; }
@@ -78,6 +83,7 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     for item in items_finales:
         pdf.cell(20, 9, f" {item['Cantidad']}", 1, 0, 'C')
         pdf.cell(120, 9, f" {item['Concepto']}", 1)
+        # REDONDEO A 2 DECIMALES PARA EL PDF
         pdf.cell(50, 9, f"$ {round(item['Subtotal_Final'], 2):,.2f} ", 1, 1, 'R')
     
     pdf.set_font('Arial', 'B', 9); pdf.cell(140, 9, ' TOTAL NETO A PAGAR', 1, 0, 'L'); pdf.cell(50, 9, f"$ {round(total, 2):,.2f} ", 1, 1, 'R')
@@ -86,11 +92,11 @@ def generar_pdf_io(cliente, items_finales, total, tipo, subtipo, firma_cli_data,
     pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"- Refacciones/Equipos: {garantia_ref} contra defectos de fabrica.\n- Mano de Obra: 4 meses sobre el mantenimiento realizado.")
     
     pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "ANULACION Y COSTOS", ln=True)
-    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por manipulacion externa o daños electricos. Visitas tecnicas adicionales: $250.00 MXN.")
+    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por manipulacion externa o daños electricos. Visitas tecnicas adicionales fuera de garantia: $250.00 MXN.")
 
     hoy = datetime.now()
     meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    txt_f = f"Firmado en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}."
+    txt_f = f"Ambas partes firman en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}."
     pdf.ln(4); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt_f)
 
     if firma_cli_data is not None and firma_prov_data is not None:
@@ -124,55 +130,58 @@ with st.container():
         tel = st.text_input("WhatsApp (10 dígitos)")
         f_p = st.date_input("Fecha Programada", value=datetime.now() + timedelta(days=1))
     with c2:
-        mats_extra = st.multiselect("Materiales extra del catálogo:", df_catalogo['Producto'].tolist())
-        mano_obra_total = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=0)
+        mats_seleccionados = st.multiselect("Materiales del catálogo:", df_catalogo['Producto'].tolist())
+        mano_obra_manual = st.number_input("Mano de Obra Total a Prorratear ($)", min_value=0, value=0)
 
     items_pdf = []; total_final = 0.0
 
+    # SECCIÓN MANTENIMIENTO PRO
     if tipo_servicio == "Mantenimiento":
-        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA (Cámaras y DVR)", expanded=True):
+        with st.expander("🛠️ CONFIGURACIÓN TÉCNICA MANTENIMIENTO", expanded=True):
             m1, m2 = st.columns(2)
             with m1:
-                c_mant = st.number_input("Cámaras a dar mantenimiento", min_value=0, value=0)
-                p_mant_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
-                c_bal = st.number_input("Transceptores (Baluns) a reemplazar", min_value=0, value=0)
-                p_bal_base = st.number_input("Costo por par de Balun $", min_value=0, value=120)
+                c_cam = st.number_input("Cámaras a mantener", min_value=0, value=0)
+                p_cam_base = st.number_input("Costo Mantenimiento unitario $", min_value=0, value=150)
+                c_bal = st.number_input("Baluns a reemplazar", min_value=0, value=0)
+                p_bal_base = st.number_input("Costo por par $", min_value=0, value=120)
             with m2:
-                sel_dvr = st.selectbox("Limpieza de DVR", ["Ninguna", "DVR 4 Canales", "DVR 8 Canales", "DVR 16 Canales", "Placa Madre"])
+                sel_dvr = st.selectbox("Limpieza DVR", ["Ninguna", "DVR 4 Canales", "DVR 8 Canales", "DVR 16 Canales", "Placa Madre"])
                 costos_dvr = {"Ninguna": 0, "DVR 4 Canales": 250, "DVR 8 Canales": 350, "DVR 16 Canales": 450, "Placa Madre": 600}
                 p_dvr_base = st.number_input("Costo Limpieza DVR $", value=costos_dvr[sel_dvr])
 
-            serv_activos = (1 if c_mant > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
+            serv_activos = (1 if c_cam > 0 else 0) + (1 if c_bal > 0 else 0) + (1 if p_dvr_base > 0 else 0)
             extra_por_concepto = round(mano_obra_total / serv_activos, 2) if serv_activos > 0 else 0
 
-            if c_mant > 0:
-                p_final = (c_mant * p_mant_base) + extra_por_concepto
-                items_pdf.append({"Cantidad": c_mant, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": p_final})
-                total_final += p_final
+            if c_cam > 0:
+                sub = round((c_cam * p_cam_base) + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": c_cam, "Concepto": "Mantenimiento preventivo a camara", "Subtotal_Final": sub})
+                total_final += sub
             if c_bal > 0:
-                p_final = (c_bal * p_bal_base) + extra_por_concepto
-                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": p_final})
-                total_final += p_final
+                sub = round((c_bal * p_bal_base) + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": c_bal, "Concepto": "Remplazo de transceptores (Baluns)", "Subtotal_Final": sub})
+                total_final += sub
             if p_dvr_base > 0:
-                p_final = p_dvr_base + extra_por_concepto
-                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": p_final})
-                total_final += p_final
+                sub = round(p_dvr_base + extra_por_concepto, 2)
+                items_pdf.append({"Cantidad": 1, "Concepto": f"Limpieza tecnica: {sel_dvr}", "Subtotal_Final": sub})
+                total_final += sub
 
-    if mats_extra:
-        with st.expander("📦 CANTIDADES DE MATERIALES EXTRA", expanded=True):
-            temp_data = {}; total_unidades = 0
-            for prod in mats_extra:
+    # SECCIÓN INSTALACIÓN NUEVA / MATERIALES EXTRA
+    if mats_seleccionados:
+        with st.expander("📦 CANTIDADES DE MATERIALES", expanded=True):
+            temp_data = {}; total_unidades_ganancia = 0
+            for prod in mats_seleccionados:
                 col_q, col_p = st.columns([1, 4])
-                with col_q: cant = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
+                with col_q: q = st.number_input(f"Cant.", min_value=1, value=1, key=f"q_{prod}")
                 with col_p: st.write(f"📦 **{prod}**")
-                temp_data[prod] = cant
-                total_unidades += cant
+                temp_data[prod] = q
+                total_unidades_ganancia += q
             
-            extra_ins = round(mano_obra_total / total_unidades, 2) if tipo_servicio != "Mantenimiento" and total_unidades > 0 else 0
-            for prod, cant in temp_data.items():
+            extra_unit_ins = round(mano_obra_total / total_unidades_ganancia, 2) if tipo_servicio != "Mantenimiento" and total_unidades_ganancia > 0 else 0
+            
+            for prod, q in temp_data.items():
                 p_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
-                sub = (p_base + extra_ins) * cant
-                items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": sub})
+                sub = round((p_base + extra_unit_ins) * q, 2)
+                items_pdf.append({"Cantidad": q, "Concepto": prod, "Subtotal_Final": sub})
                 total_final += sub
             
     st.divider()
@@ -202,4 +211,4 @@ if st.button("🚀 GENERAR CONTRATO"):
             st.markdown(f'<a href="{url_wa}" target="_blank" class="whatsapp-btn">💬 Compartir por WhatsApp</a>', unsafe_allow_html=True)
             st.success("✅ Documento generado.")
         except Exception as e: st.error(f"Error: {e}")
-    else: st.error("⚠️ Completa Nombre, WhatsApp y ambas Firmas.")
+    else: st.error("⚠️ Completa datos y firmas.")
