@@ -40,7 +40,7 @@ except Exception as e:
     st.error(f"⚠️ Error al conectar con el catálogo: {e}")
     st.stop()
 
-# 3. FUNCIÓN GENERADORA DE PDF (SOLUCIÓN DEFINITIVA DE FIRMAS + CLÁUSULAS)
+# 3. FUNCIÓN GENERADORA DE PDF (CONTRATO DETALLADO)
 def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_prov_data, fecha_p, notas):
     pdf = FPDF()
     pdf.add_page()
@@ -53,51 +53,58 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
     pdf.set_font('Arial', '', 9); pdf.cell(0, 5, f'Fecha de Emision: {datetime.now().strftime("%d/%m/%Y")}', ln=True, align='R')
     pdf.ln(18)
 
-    # Cuerpo del Contrato
-    pdf.set_font('Arial', 'B', 11); pdf.cell(0, 7, 'CONTRATO DE PRESTACION DE SERVICIOS DE INSTALACION', ln=True, align='C')
+    # Título y Cuerpo del Contrato
+    pdf.set_font('Arial', 'B', 11); pdf.cell(0, 7, 'Contrato de Prestacion de Servicios de Instalacion', ln=True, align='C')
     pdf.ln(4)
 
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, f"Este contrato lo celebran, por una parte, IO SECURITY, en adelante 'EL PRESTADOR', y por la otra, {cliente}, en adelante 'EL CLIENTE'.")
+    pdf.set_font('Arial', '', 9)
+    intro = f"Este contrato lo celebran, por una parte, IO SECURITY, en adelante 'EL PRESTADOR', y por la otra, {cliente}, en adelante 'EL CLIENTE'."
+    pdf.multi_cell(0, 5, intro)
     pdf.ln(2)
 
-    pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA PRIMERA: OBJETO DEL CONTRATO", ln=True)
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, "EL PRESTADOR se compromete a instalar un sistema de camaras (CCTV). Detalle de equipos:")
+    pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA PRIMERA: OBJETO DEL CONTRATO", ln=True)
+    pdf.set_font('Arial', '', 9)
+    pdf.multi_cell(0, 5, "EL PRESTADOR se compromete a instalar y poner en funcionamiento un sistema de camaras de seguridad (CCTV) en el domicilio de EL CLIENTE. Los equipos y servicios se detallan a continuacion:")
     pdf.ln(2)
 
-    # Tabla
-    pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255)
+    # Tabla de Equipos
+    pdf.set_fill_color(0, 0, 0); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 9)
     pdf.cell(20, 8, ' Cant.', 1, 0, 'C', True)
     pdf.cell(120, 8, ' Descripcion del Sistema', 1, 0, 'L', True)
     pdf.cell(50, 8, 'Total Concepto ', 1, 1, 'C', True)
     
-    pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 10)
+    pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
     for item in items_finales:
-        pdf.cell(20, 10, f" {item['Cantidad']}", 1, 0, 'C')
-        pdf.cell(120, 10, f" {item['Concepto']}", 1)
-        pdf.cell(50, 10, f"$ {item['Subtotal_Final']:,}.00 ", 1, 1, 'R')
+        pdf.cell(20, 8, f" {item['Cantidad']}", 1, 0, 'C')
+        pdf.cell(120, 8, f" {item['Concepto']}", 1)
+        pdf.cell(50, 8, f"$ {item['Subtotal_Final']:,}.00 ", 1, 1, 'R')
     
-    pdf.set_font('Arial', 'B', 10)
-    pdf.cell(140, 10, ' TOTAL NETO A PAGAR', 1, 0, 'L')
-    pdf.cell(50, 10, f"$ {total:,.2f} ", 1, 1, 'R')
-    pdf.ln(5)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(140, 8, ' TOTAL NETO A PAGAR', 1, 0, 'L')
+    pdf.cell(50, 8, f"$ {total:,.2f} ", 1, 1, 'R')
+    pdf.ln(4)
 
-    # Cláusulas Legales Detalladas
-    pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA SEGUNDA: VIGENCIA Y COSTO", ln=True)
-    pdf.set_font('Arial', '', 10); pdf.multi_cell(0, 5, f"Costo total: ${total:,.2f} MXN. Instalacion programada: {fecha_p.strftime('%d/%m/%Y')}.")
+    # Cláusulas Detalladas
+    pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEGUNDA: VIGENCIA Y COSTO DEL SERVICIO", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, f"El costo total es de ${total:,.2f} MXN. La fecha programada de instalacion es {fecha_p.strftime('%d/%m/%Y')}.")
     
-    pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA TERCERA: GARANTIAS", ln=True)
-    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "- Equipos: 8 meses contra defectos de fabrica.\n- Mano de Obra: 4 meses sobre instalacion y configuracion.")
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA TERCERA: GARANTIAS", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "- Garantia de Equipos: 8 meses a partir de la instalacion contra defectos de fabrica (camaras, DVR, discos duros).\n- Garantia de Mano de Obra: 4 meses que cubre cualquier falla relacionada con la instalacion o configuracion por IO SECURITY.")
 
-    pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA CUARTA: ANULACION DE GARANTIA", ln=True)
-    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 4, "La garantia se anula por: Manipulacion de terceros, daños electricos (voltaje), daño fisico, mal uso o problemas de red externos.")
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA CUARTA: PROCESO PARA HACER VALIDA LA GARANTIA", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "EL CLIENTE debera notificar al 7711648186. IO SECURITY se compromete a programar una visita tecnica en un plazo no mayor a 72 horas habiles.")
 
-    pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 5, "CLAUSULA QUINTA: JURISDICCION", ln=True)
-    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Para cualquier controversia, las partes se someten a los tribunales de Mineral de la Reforma, Hidalgo.")
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA QUINTA: ANULACION DE LA GARANTIA", ln=True)
+    pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.5, "La garantia se anula por: 1) Manipulacion por personal ajeno a IO SECURITY. 2) Daños Electricos: Fallas por sobrecargas o variaciones de voltaje. 3) Daño Fisico: Golpes o caidas. 4) Mal Uso. 5) Desastres Naturales o Vandalismo. 6) Problemas de Red: Fallas derivadas del internet del cliente.")
 
-    # Fecha automática al final
-    pdf.ln(5)
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEXTA: COSTOS ADICIONALES", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Visitas técnicas que no esten cubiertas por la garantia tendran un costo de $250.00 MXN, cubiertos al momento de la visita.")
+
+    pdf.ln(2); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "CLAUSULA SEPTIMA: JURISDICCION", ln=True)
+    pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, "Las partes se someten a la jurisdiccion de los tribunales de Mineral de la Reforma, Hidalgo.")
+
+    # Fecha automática final
+    pdf.ln(4)
     hoy = datetime.now()
     meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     txt_fecha = f"Ambas partes firman de conformidad en Mineral de la Reforma, a los {hoy.day} dias del mes de {meses[hoy.month-1]} del año {hoy.year}."
@@ -105,8 +112,8 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
 
     # --- FIRMAS ---
     if firma_cli_data is not None and firma_prov_data is not None:
-        y_f = pdf.get_y() + 10
-        if y_f > 250: pdf.add_page(); y_f = 30
+        y_f = pdf.get_y() + 8
+        if y_f > 260: pdf.add_page(); y_f = 30
         
         def guardar_temp(data):
             img = Image.fromarray(data.astype('uint8'), 'RGBA')
@@ -115,10 +122,10 @@ def generar_pdf_io(cliente, items_finales, total, tipo, firma_cli_data, firma_pr
             return tmp.name
 
         p_cli = guardar_temp(firma_cli_data); p_prov = guardar_temp(firma_prov_data)
-        pdf.image(p_cli, 30, y_f, 50, 25); pdf.image(p_prov, 130, y_f, 50, 25)
+        pdf.image(p_cli, 30, y_f, 50, 20); pdf.image(p_prov, 130, y_f, 50, 20)
         os.unlink(p_cli); os.unlink(p_prov)
         
-        pdf.set_y(y_f + 25); pdf.set_font('Arial', 'B', 9)
+        pdf.set_y(y_f + 20); pdf.set_font('Arial', 'B', 9)
         pdf.cell(95, 7, 'FIRMA CLIENTE', 0, 0, 'C'); pdf.cell(95, 7, 'IVAN ORTIZ (IO SECURITY)', 0, 1, 'C')
 
     return pdf.output(dest='S').encode('latin-1')
@@ -166,6 +173,7 @@ with st.container():
             precio_base = df_catalogo[df_catalogo['Producto'] == prod]['Precio'].values[0]
             extra_a = extra_por_unit if prod in mats_para_ganancia else 0
             subtotal = (precio_base + extra_a) * cant
+            
             items_pdf.append({"Cantidad": cant, "Concepto": prod, "Subtotal_Final": subtotal})
             total_final += subtotal
             
