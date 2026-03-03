@@ -7,7 +7,7 @@ import base64, tempfile, os, urllib.parse, random
 from PIL import Image
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
-st.set_page_config(page_title="IO SECURITY", page_icon="logo.png", layout="wide")
+st.set_page_config(page_title="IO SECURITY", page_icon="https://github.com/iosecurcctv-rgb/io-app/blob/main/logo.png?raw=true", layout="wide")
 
 st.markdown("""
     <head>
