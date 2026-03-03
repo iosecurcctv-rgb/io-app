@@ -77,8 +77,8 @@ def numero_a_letras(numero):
     return f"{letras.strip()} PESOS {decimal:02d}/100 M.N."
 
 
-# ---------------- NUEVO MÓDULO: GENERADOR DE PDF PARA ANTICIPO ----------------
-def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_desc, proy_ini, proy_plazo, proy_link, ant_fecha, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo):
+# ---------------- MÓDULO: GENERADOR DE PDF PARA ANTICIPO (CON FIRMA DIGITAL) ----------------
+def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_desc, proy_ini, proy_plazo, proy_link, ant_fecha, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo, f_p_img):
     pdf = FPDF()
     pdf.add_page()
     
@@ -86,12 +86,12 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     try: pdf.image('logo.png', 10, 10, 35)
     except: pass
     
-    pdf.set_font('Arial', 'B', 16)
+    pdf.set_font('Arial', 'B', 18)
     pdf.set_xy(50, 15)
     pdf.cell(0, 10, 'Confirmacion de Anticipo', 0, 1, 'R')
-    pdf.ln(15)
     
-    # Función auxiliar para dibujar tablas profesionales
+    pdf.set_y(50) 
+    
     def dibujar_tabla(titulo, texto_previo, datos):
         pdf.set_font('Arial', 'B', 11)
         pdf.cell(0, 8, titulo, 0, 1, 'L')
@@ -103,14 +103,16 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
         pdf.set_fill_color(164, 25, 25)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font('Arial', 'B', 10)
-        pdf.cell(70, 7, 'Concepto', 1, 0, 'C', True)
-        pdf.cell(120, 7, 'Detalle', 1, 1, 'C', True)
+        
+        pdf.cell(65, 7, 'Concepto', 1, 0, 'C', True)
+        pdf.cell(125, 7, 'Detalle', 1, 1, 'C', True)
         
         pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Arial', '', 10)
         for concepto, detalle in datos:
-            pdf.cell(70, 7, f" {concepto}", 1, 0, 'L')
-            pdf.cell(120, 7, f" {detalle}", 1, 1, 'L')
+            pdf.set_font('Arial', 'B', 9) 
+            pdf.cell(65, 7, f" {concepto}", 1, 0, 'L')
+            pdf.set_font('Arial', '', 9)  
+            pdf.cell(125, 7, f" {detalle}", 1, 1, 'L')
         pdf.ln(6)
 
     # 1. Detalles de la Empresa
@@ -141,6 +143,10 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Detalles del Proyecto/Servicio", "El anticipo se aplica al siguiente proyecto o servicio acordado:", proy_datos)
     
+    # Prevención de corte de página
+    if pdf.get_y() > 220:
+        pdf.add_page()
+        
     # 4. Detalles del Anticipo
     ant_datos = [
         ("Fecha de Recepcion", ant_fecha),
@@ -152,17 +158,38 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Detalles del Anticipo Recibido", "A continuacion, se detallan los datos del anticipo recibido:", ant_datos)
     
-    # 5. Declaración y Próximos Pasos (Texto exacto)
+    # 5. Declaración y Próximos Pasos 
     pdf.set_font('Arial', 'B', 11)
     pdf.cell(0, 8, "Declaracion y Proximos Pasos", 0, 1, 'L')
     pdf.set_font('Arial', '', 10)
     pdf.multi_cell(0, 5, f"Confirmamos que el anticipo de ${ant_monto:,.2f} MXN ha sido recibido con exito, lo que nos permite proceder con la fase de {proy_nom}.")
     pdf.ln(2)
     pdf.multi_cell(0, 5, "Agradecemos su confianza en nuestra empresa. Si tiene alguna pregunta, no dude en contactarnos.")
-    pdf.ln(8)
     
-    # Firma
-    pdf.multi_cell(0, 5, "Atentamente,\n\nIng. Ivan Ortiz Perea\nCEO\nIO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD")
+    # FIRMA PROFESIONAL CON RECUADRO DIGITAL APLICADO
+    pdf.ln(12)
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(0, 5, "Atentamente,", 0, 1, 'C')
+    
+    y_firma = pdf.get_y() + 2
+    if f_p_img is not None:
+        def g_t(d):
+            img = Image.fromarray(d.astype('uint8'), 'RGBA'); t = tempfile.NamedTemporaryFile(delete=False, suffix=".png"); img.save(t.name); return t.name
+        p_img = g_t(f_p_img)
+        # Centrar firma (Ancho hoja 210, Ancho firma 40 -> X = 85)
+        pdf.image(p_img, 85, y_firma, 40, 15)
+        os.unlink(p_img)
+        
+    pdf.ln(18)
+    pdf.set_x(65)
+    pdf.cell(80, 0, "", "T", 1, 'C') # Línea para firmar
+    pdf.ln(2)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 5, "Ing. Ivan Ortiz Perea", 0, 1, 'C')
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(0, 4, "CEO", 0, 1, 'C')
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(0, 4, "IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD", 0, 1, 'C')
 
     return pdf.output(dest='S').encode('latin-1')
 # --------------------------------------------------------------------------------
@@ -398,7 +425,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     return pdf.output(dest='S').encode('latin-1')
 
 
-# 4. INTERFAZ OPERATIVA Y PRORRATEO (MÓDULOS INTACTOS + NUEVO MÓDULO ANTICIPO)
+# 4. INTERFAZ OPERATIVA Y PRORRATEO (MÓDULOS INTACTOS)
 st.sidebar.title("🛡️ CONTROL IO")
 tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
@@ -409,7 +436,6 @@ with st.container():
         nom = st.text_input("👤 CLIENTE"); tel = st.text_input("📞 WHATSAPP (10 DIG)"); f_p = st.date_input("📅 FECHA")
         email_input = st.text_input("📧 EMAIL DEL CLIENTE") if tipo in ["Cotización", "Anticipo"] else ""
         
-        # DATOS ADICIONALES PARA ANTICIPO
         if tipo == "Anticipo":
             id_fiscal = st.text_input("🪪 DOCUMENTO DE IDENTIDAD / ID FISCAL")
             proy_nom = st.text_input("🏗️ NOMBRE DEL PROYECTO/SERVICIO")
@@ -425,7 +451,6 @@ with st.container():
             iva_pct = 16 if iva_sel == "SÍ" else 0
             anticipo_sel = st.selectbox("Porcentaje de Anticipo:", ["50", "60", "70", "80", "100"])
 
-        # DATOS ADICIONALES PARA ANTICIPO (DERECHA)
         if tipo == "Anticipo":
             proy_plazo = st.text_input("⏱️ PLAZO DE ENTREGA ESTIMADO")
             proy_link = st.text_input("🔗 ENLACE AL CONTRATO/PROPUESTA")
@@ -514,17 +539,20 @@ if tipo == "Cotización":
         else: st.error("⚠️ REQUERIDO: Nombre del cliente.")
 
 elif tipo == "Anticipo":
+    # RECUADRO DE FIRMA DIGITAL AÑADIDO EXCLUSIVAMENTE PARA EL ANTICIPO
+    st.markdown("### ✍️ FIRMA DE RECIBIDO (IO SECURITY)")
+    c_prov_ant = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=150, width=350, key="prov_ant", display_toolbar=True)
+    
     if st.button("🚀 FINALIZAR Y GENERAR RECIBO DE ANTICIPO"):
-        if nom and proy_nom:
+        if nom and proy_nom and c_prov_ant.image_data is not None:
             try:
-                # Se genera el PDF de Anticipo
-                pdf_b = generar_pdf_anticipo(nom, email_input, tel, id_fiscal, proy_nom, proy_desc, f_p.strftime('%d %b %Y'), proy_plazo, proy_link, ant_fecha_rec, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo_pendiente)
+                pdf_b = generar_pdf_anticipo(nom, email_input, tel, id_fiscal, proy_nom, proy_desc, f_p.strftime('%d %b %Y'), proy_plazo, proy_link, ant_fecha_rec, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo_pendiente, c_prov_ant.image_data)
                 st.markdown(f"<div class='success-box'>💵 SISTEMA: RECIBO DE ANTICIPO CREADO CON ÉXITO.</div>", unsafe_allow_html=True)
                 st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Anticipo_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR RECIBO DE ANTICIPO</a>', unsafe_allow_html=True)
                 msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le confirmo la recepcion de su anticipo por ${ant_monto:,.2f} MXN para el proyecto {proy_nom}. Le adjunto su comprobante en PDF.")
                 st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
             except Exception as e: st.error(f"ERROR TÉCNICO: {e}")
-        else: st.error("⚠️ REQUERIDO: Nombre del Cliente y Nombre del Proyecto.")
+        else: st.error("⚠️ REQUERIDO: Nombre del Cliente, Nombre del Proyecto y tu Firma Digital.")
 
 else:
     st.markdown("### ✍️ FIRMAS DIGITALES")
