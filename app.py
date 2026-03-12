@@ -6,8 +6,13 @@ from fpdf import FPDF
 import base64, tempfile, os, urllib.parse, random
 from PIL import Image
 
+# --- NUEVO: IMPORTACIONES PARA EL CALENDARIO ---
+import requests
+import json
+# -----------------------------------------------
+
 # 1. IDENTIDAD Y ESTILO (INTACTO)
-st.set_page_config(page_title="IO SECURITY", page_icon="https://github.com/iosecurcctv-rgb/io-app/blob/main/logo.png?raw=true", layout="wide")
+st.set_page_config(page_title="IO SECURITY", page_icon="logo.png", layout="wide")
 
 st.markdown("""
     <head>
@@ -425,6 +430,27 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     return pdf.output(dest='S').encode('latin-1')
 
 
+# --- NUEVA FUNCIÓN PARA AGENDAR EN CALENDARIO ---
+def agendar_recordatorio(tipo_evento, cliente, fecha):
+    # ¡IMPORTANTE! Pega aquí la URL que te dio Google Apps Script
+    url_script = "TU_URL_DE_GOOGLE_SCRIPT_AQUI" 
+    
+    # st.date_input devuelve un objeto date, lo pasamos a string
+    fecha_str = fecha.strftime("%Y-%m-%d")
+    
+    datos = {
+        "titulo": f"{tipo_evento} - {cliente} (IO SECURITY)",
+        "fechaInicio": f"{fecha_str}T10:00:00Z", # Agendado para las 10:00 AM UTC
+        "fechaFin": f"{fecha_str}T12:00:00Z",    # Termina a las 12:00 PM UTC
+        "descripcion": f"Recordatorio automático generado desde la App de IO SECURITY. Cliente: {cliente}"
+    }
+    try:
+        requests.post(url_script, data=json.dumps(datos))
+    except:
+        pass # Si falla el internet o algo, ignoramos para no detener la app
+# ------------------------------------------------
+
+
 # 4. INTERFAZ OPERATIVA Y PRORRATEO (MÓDULOS INTACTOS)
 st.sidebar.title("🛡️ CONTROL IO")
 tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo"])
@@ -547,6 +573,11 @@ elif tipo == "Anticipo":
         if nom and proy_nom and c_prov_ant.image_data is not None:
             try:
                 pdf_b = generar_pdf_anticipo(nom, email_input, tel, id_fiscal, proy_nom, proy_desc, f_p.strftime('%d %b %Y'), proy_plazo, proy_link, ant_fecha_rec, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo_pendiente, c_prov_ant.image_data)
+                
+                # --- NUEVO: DISPARADOR DEL RECORDATORIO ---
+                agendar_recordatorio("Proyecto/Anticipo", nom, f_p)
+                # ------------------------------------------
+
                 st.markdown(f"<div class='success-box'>💵 SISTEMA: RECIBO DE ANTICIPO CREADO CON ÉXITO.</div>", unsafe_allow_html=True)
                 st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Anticipo_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR RECIBO DE ANTICIPO</a>', unsafe_allow_html=True)
                 msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le confirmo la recepcion de su anticipo por ${ant_monto:,.2f} MXN para el proyecto {proy_nom}. Le adjunto su comprobante en PDF.")
@@ -564,6 +595,11 @@ else:
         if c_cli.image_data is not None and nom and dom_input:
             try:
                 pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, sub_m, periodo_io, tec_io, n_cam_io, can_io, c_cli.image_data, c_prov.image_data, f_p, dom_input, notas_input)
+                
+                # --- NUEVO: DISPARADOR DEL RECORDATORIO ---
+                agendar_recordatorio(tipo, nom, f_p)
+                # ------------------------------------------
+
                 st.markdown(f"<div class='success-box'>🔒 SISTEMA: CONTRATO DE {tipo.upper()} GENERADO CON ÉXITO.</div>", unsafe_allow_html=True)
                 st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
                 msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmo la generacion de su contrato. Adjunto PDF.")
