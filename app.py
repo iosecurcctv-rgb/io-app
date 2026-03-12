@@ -433,7 +433,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
 # --- NUEVA FUNCIÓN PARA AGENDAR EN CALENDARIO ---
 def agendar_recordatorio(tipo_evento, cliente, fecha):
     # ¡IMPORTANTE! Pega aquí la URL que te dio Google Apps Script
-    url_script = "TU_URL_DE_GOOGLE_SCRIPT_AQUI" 
+    url_script = "https://script.google.com/macros/s/AKfycby3FZMuNjBkHu9u5fybu7RWoIb7oGmhuKQk23hRujW3bZ_r07l4UZ75ZWb3ZRgzbiAr/exec" 
     
     # st.date_input devuelve un objeto date, lo pasamos a string
     fecha_str = fecha.strftime("%Y-%m-%d")
