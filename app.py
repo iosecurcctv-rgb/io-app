@@ -531,7 +531,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
 
 # --- FUNCIÓN PARA AGENDAR EN CALENDARIO ---
 def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
-    url_script = "TU_URL_DE_GOOGLE_SCRIPT_AQUI" 
+    url_script = "https://script.google.com/macros/s/AKfycby3FZMuNjBkHu9u5fybu7RWoIb7oGmhuKQk23hRujW3bZ_r07l4UZ75ZWb3ZRgzbiAr/exec" 
     
     dt_inicio = datetime.combine(fecha, hora_elegida)
     dt_fin = dt_inicio + timedelta(hours=2)
