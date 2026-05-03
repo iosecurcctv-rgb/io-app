@@ -13,7 +13,30 @@ import json
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
 st.set_page_config(page_title="IO SECURITY", page_icon="logo.png", layout="wide")
+import streamlit.components.v1 as components
 
+# --- INYECCIÓN FORZADA DEL LOGO PARA CELULARES ---
+components.html(
+    """
+    <script>
+        const favicon = document.querySelector('link[rel="shortcut icon"]');
+        if (favicon) { favicon.href = 'logo.png'; }
+        const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+        if (appleIcon) { appleIcon.href = 'logo.png'; }
+        const iconManifest = document.querySelector('link[rel="icon"]');
+        if (iconManifest) { iconManifest.href = 'logo.png'; }
+
+        // Forzar actualización del DOM para PWA
+        let link = document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = 'logo.png';
+        document.head.appendChild(link);
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+# ------------------------------------------------
 st.markdown("""
     <head>
         <link rel="apple-touch-icon" href="logo.png?v=3">
