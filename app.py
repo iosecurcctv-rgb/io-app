@@ -529,6 +529,131 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     return pdf.output(dest='S').encode('latin-1')
 
 
+# --- NUEVO: GENERADOR DE PDF PARA NOTA SIN VALOR FISCAL ---
+def generar_pdf_nota(cli, items, total_base, tel, email, folio):
+    pdf = FPDF()
+    pdf.add_page()
+    hoy = datetime.now()
+    
+    pdf.set_fill_color(164, 25, 25) 
+    pdf.rect(10, 10, 50, 25, 'FD')
+    try: 
+        pdf.image('logo.png', 12, 12, 46, 21)
+    except: 
+        pass
+    
+    pdf.rect(60, 10, 80, 25, 'D')
+    pdf.set_xy(60, 12)
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(80, 6, 'NOTA DE COMPROBANTE', 0, 1, 'C')
+    pdf.set_font('Arial', 'B', 9)
+    pdf.set_x(60)
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(80, 5, 'SIN VALOR FISCAL', 0, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', '', 7)
+    pdf.set_x(60)
+    pdf.cell(80, 4, 'IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD', 0, 1, 'C')
+    pdf.set_x(60)
+    pdf.cell(80, 4, 'Tel: 7711648186 | info@iosecurity.com', 0, 1, 'C')
+    
+    pdf.rect(140, 10, 60, 25, 'D')
+    pdf.set_xy(140, 12)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(30, 10, 'FOLIO', 1, 0, 'C')
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(30, 10, str(folio), 1, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(140, 22)
+    pdf.cell(30, 10, 'FECHA:', 1, 0, 'C')
+    pdf.cell(30, 10, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
+    
+    pdf.set_y(38)
+    
+    pdf.set_fill_color(164, 25, 25)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(190, 6, 'DATOS DEL CLIENTE', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'NOMBRE:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(75, 6, cli, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(10, 6, 'TEL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(30, 6, tel, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'EMAIL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(45, 6, email, 1, 1, 'L')
+    
+    pdf.ln(2)
+    
+    pdf.set_fill_color(164, 25, 25)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
+    pdf.cell(115, 6, 'DESCRIPCION DE LOS ARTICULOS / SERVICIOS', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'PRECIO UNIT', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'IMPORTE', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', '', 8)
+    min_rows = 18
+    for i in range(max(min_rows, len(items))):
+        if i < len(items):
+            it = items[i]
+            pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
+            pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
+            unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
+            pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'R')
+            pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'R')
+        else:
+            pdf.cell(15, 6, '', 1, 0, 'C')
+            pdf.cell(115, 6, '', 1, 0, 'L')
+            pdf.cell(30, 6, '', 1, 0, 'R')
+            pdf.cell(30, 6, '', 1, 1, 'R')
+            
+    pdf.ln(0) 
+    y_tot = pdf.get_y()
+    
+    pdf.rect(10, y_tot, 130, 12)
+    pdf.set_xy(12, y_tot + 2)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(126, 4, f'CANTIDAD CON LETRA: {numero_a_letras(total_base)}', 0, 1, 'L')
+
+    pdf.set_xy(140, y_tot)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(25, 12, 'TOTAL:', 1, 0, 'R')
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(35, 12, f"$ {total_base:,.2f}", 1, 1, 'R')
+    
+    pdf.set_y(y_tot + 14)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(40, 6, 'METODO DE PAGO:', 'L,T,B', 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(40, 6, '[   ] EFECTIVO', 'T,B', 0, 'C')
+    pdf.cell(40, 6, '[   ] TARJETA', 'T,B', 0, 'C')
+    pdf.cell(70, 6, '[   ] TRANSFERENCIA:', 'T,B,R', 1, 'L')
+    
+    pdf.ln(4)
+    pdf.set_fill_color(0, 0, 0)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(190, 6, 'AVISO LEGAL IMPORTANTE - LEYENDA DE PROTECCION', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', '', 7)
+    leyenda_proteccion = "Este documento es estrictamente una NOTA DE REMISION/COMPROBANTE DE PEDIDO emitida para el control interno y como constancia de la entrega de bienes o servicios detallados. ESTE DOCUMENTO CARECE DE VALIDEZ FISCAL. No es deducible de impuestos y no representa una factura electronica (CFDI). Al recibir este documento, el cliente acepta que las garantias de los productos se sujetaran a las politicas internas de IO SECURITY y que cualquier reclamacion debera acompañarse de este comprobante original."
+    pdf.multi_cell(190, 4, leyenda_proteccion, 1, 'J')
+    
+    return pdf.output(dest='S').encode('latin-1')
+# --------------------------------------------------------------
+
+
 # --- FUNCIÓN PARA AGENDAR EN CALENDARIO ---
 def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
     url_script = "https://script.google.com/macros/s/AKfycby3FZMuNjBkHu9u5fybu7RWoIb7oGmhuKQk23hRujW3bZ_r07l4UZ75ZWb3ZRgzbiAr/exec" 
@@ -551,12 +676,15 @@ def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
         pass 
 # ------------------------------------------
 
-# 4. INTERFAZ OPERATIVA Y PRORRATEO (MÓDULOS INTACTOS)
+# 4. INTERFAZ OPERATIVA Y PRORRATEO
 st.sidebar.title("🛡️ CONTROL IO")
-tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita"])
+
+# --- CAMBIO AQUÍ: Agregué "Nota sin Valor Fiscal" al menú ---
+tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita", "Nota sin Valor Fiscal"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
 
-# --- NUEVO MÓDULO: CREAR CITA ---
+
+# --- MÓDULO: CREAR CITA ---
 if tipo == "Crear Cita":
     st.markdown("## 📅 AGENDAR NUEVA CITA EN CALENDARIO")
     col_cita1, col_cita2 = st.columns(2)
@@ -585,7 +713,9 @@ elif tipo != "Crear Cita":
             nom = st.text_input("👤 CLIENTE")
             tel = st.text_input("📞 WHATSAPP (10 DIG)")
             f_p = st.date_input("📅 FECHA")
-            email_input = st.text_input("📧 EMAIL DEL CLIENTE") if tipo in ["Cotización", "Anticipo"] else ""
+            
+            # --- CAMBIO MÍNIMO PARA MOSTRAR EMAIL EN NOTAS ---
+            email_input = st.text_input("📧 EMAIL DEL CLIENTE") if tipo in ["Cotización", "Anticipo", "Nota sin Valor Fiscal"] else ""
             
             if tipo == "Anticipo":
                 id_fiscal = st.text_input("🪪 DOCUMENTO DE IDENTIDAD / ID FISCAL")
@@ -596,8 +726,11 @@ elif tipo != "Crear Cita":
             m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo not in ["Servicio IO Prevent", "Anticipo"] else []
             m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0) if tipo != "Anticipo" else 0.0
             
-            if tipo == "Cotización":
+            # --- CAMBIO MÍNIMO PARA FOLIO EN NOTAS ---
+            if tipo in ["Cotización", "Nota sin Valor Fiscal"]:
                 folio_input = st.text_input("📝 NÚMERO DE FOLIO", value="001")
+            
+            if tipo == "Cotización":
                 iva_sel = st.selectbox("¿Agregar IVA (16%)?", ["NO", "SÍ"])
                 iva_pct = 16 if iva_sel == "SÍ" else 0
                 anticipo_sel = st.selectbox("Porcentaje de Anticipo:", ["50", "60", "70", "80", "100"])
@@ -612,8 +745,8 @@ elif tipo != "Crear Cita":
                 ant_metodo = st.selectbox("💳 MÉTODO DE PAGO", ["Transferencia", "Efectivo", "Tarjeta"])
                 ant_ref = st.text_input("🧾 REFERENCIA DE LA TRANSACCIÓN")
 
-        dom_input = st.text_input("🏠 DOMICILIO CLIENTE") if tipo not in ["Cotización", "Anticipo"] else ""
-        notas_input = st.text_area("📝 NOTAS ADICIONALES") if tipo not in ["Cotización", "Anticipo"] else ""
+        dom_input = st.text_input("🏠 DOMICILIO CLIENTE") if tipo not in ["Cotización", "Anticipo", "Nota sin Valor Fiscal"] else ""
+        notas_input = st.text_area("📝 NOTAS ADICIONALES") if tipo not in ["Cotización", "Anticipo", "Nota sin Valor Fiscal"] else ""
 
         items_pdf = []
         total_final = 0.0
@@ -694,7 +827,24 @@ elif tipo != "Crear Cita":
             st.metric("VALOR TOTAL", f"${total_final:,.2f}")
 
     # LÓGICA DE BOTONES SEPARADA
-    if tipo == "Cotización":
+    
+    # --- NUEVO BOTÓN: NOTA SIN VALOR FISCAL ---
+    if tipo == "Nota sin Valor Fiscal":
+        if st.button("🚀 FINALIZAR Y GENERAR NOTA"):
+            if nom:
+                try:
+                    pdf_b = generar_pdf_nota(nom, items_pdf, total_final, tel, email_input, folio_input)
+                    st.markdown(f"<div class='success-box'>📝 SISTEMA: NOTA CREADA CON ÉXITO.</div>", unsafe_allow_html=True)
+                    st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Nota_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR NOTA DE COMPROBANTE</a>', unsafe_allow_html=True)
+                    msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Le adjunto su nota de comprobante en formato PDF. Quedo a sus ordenes.")
+                    st.markdown(f'<a href="https://wa.me/52{tel}?text={msg}" target="_blank" class="whatsapp-btn">2. 💬 ENVIAR POR WHATSAPP</a>', unsafe_allow_html=True)
+                except Exception as e: 
+                    st.error(f"ERROR TÉCNICO: {e}")
+            else: 
+                st.error("⚠️ REQUERIDO: Nombre del cliente.")
+    # ------------------------------------------
+
+    elif tipo == "Cotización":
         if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
             if nom:
                 try:
@@ -725,7 +875,6 @@ elif tipo != "Crear Cita":
             else: 
                 st.error("⚠️ REQUERIDO: Nombre del Cliente, Nombre del Proyecto y tu Firma Digital.")
 
-    # --- CAMBIO AQUÍ: Originalmente era "else:" ---
     elif tipo in ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"]:
         st.markdown("### ✍️ FIRMAS DIGITALES")
         f1, f2 = st.columns(2)
@@ -745,4 +894,4 @@ elif tipo != "Crear Cita":
                 except Exception as e: 
                     st.error(f"ERROR TÉCNICO: {e}")
             else: 
-                st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")           
+                st.error("⚠️ REQUERIDO: Nombre, Domicilio y Firmas.")
