@@ -529,7 +529,7 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
     return pdf.output(dest='S').encode('latin-1')
 
 
-# --- NUEVO: GENERADOR DE PDF PARA NOTA SIN VALOR FISCAL ---
+# --- ACTUALIZADO: GENERADOR DE PDF PARA NOTA SIN VALOR FISCAL (ESTÉTICA CORREGIDA) ---
 def generar_pdf_nota(cli, items, total_base, tel, email, folio):
     pdf = FPDF()
     pdf.add_page()
@@ -552,12 +552,20 @@ def generar_pdf_nota(cli, items, total_base, tel, email, folio):
     pdf.set_text_color(255, 0, 0)
     pdf.cell(80, 5, 'SIN VALOR FISCAL', 0, 1, 'C')
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', '', 7)
-    pdf.set_x(60)
-    pdf.cell(80, 4, 'IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD', 0, 1, 'C')
-    pdf.set_x(60)
-    pdf.cell(80, 4, 'Tel: 7711648186 | info@iosecurity.com', 0, 1, 'C')
     
+    # --- CAMBIO AQUI: Uso multi_cell y aumento la letra ---
+    pdf.set_y(24) # Bajo un poco la coordenada vertical
+    pdf.set_x(60)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.multi_cell(80, 4, 'IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD', 0, 'C')
+    
+    # Bajo otro poco para el teléfono
+    y_actual = pdf.get_y()
+    pdf.set_xy(60, y_actual)
+    pdf.set_font('Arial', '', 7)
+    pdf.cell(80, 3, 'Tel: 7711648186 | info@iosecurity.com', 0, 1, 'C')
+    # --------------------------------------------------------
+
     pdf.rect(140, 10, 60, 25, 'D')
     pdf.set_xy(140, 12)
     pdf.set_font('Arial', 'B', 9)
@@ -714,7 +722,6 @@ elif tipo != "Crear Cita":
             tel = st.text_input("📞 WHATSAPP (10 DIG)")
             f_p = st.date_input("📅 FECHA")
             
-            # --- CAMBIO MÍNIMO PARA MOSTRAR EMAIL EN NOTAS ---
             email_input = st.text_input("📧 EMAIL DEL CLIENTE") if tipo in ["Cotización", "Anticipo", "Nota sin Valor Fiscal"] else ""
             
             if tipo == "Anticipo":
@@ -726,7 +733,6 @@ elif tipo != "Crear Cita":
             m_sel = st.multiselect("📦 MATERIALES:", df_cat['Producto'].tolist()) if tipo not in ["Servicio IO Prevent", "Anticipo"] else []
             m_total = st.number_input("💵 MANO DE OBRA / COSTO ($)", min_value=0.0) if tipo != "Anticipo" else 0.0
             
-            # --- CAMBIO MÍNIMO PARA FOLIO EN NOTAS ---
             if tipo in ["Cotización", "Nota sin Valor Fiscal"]:
                 folio_input = st.text_input("📝 NÚMERO DE FOLIO", value="001")
             
@@ -828,7 +834,6 @@ elif tipo != "Crear Cita":
 
     # LÓGICA DE BOTONES SEPARADA
     
-    # --- NUEVO BOTÓN: NOTA SIN VALOR FISCAL ---
     if tipo == "Nota sin Valor Fiscal":
         if st.button("🚀 FINALIZAR Y GENERAR NOTA"):
             if nom:
@@ -842,7 +847,6 @@ elif tipo != "Crear Cita":
                     st.error(f"ERROR TÉCNICO: {e}")
             else: 
                 st.error("⚠️ REQUERIDO: Nombre del cliente.")
-    # ------------------------------------------
 
     elif tipo == "Cotización":
         if st.button("🚀 FINALIZAR Y GENERAR COTIZACIÓN"):
