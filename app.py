@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, time
 from fpdf import FPDF
 import base64, tempfile, os, urllib.parse, random
 from PIL import Image
+import numpy as np
 
 # --- NUEVO: IMPORTACIONES PARA EL CALENDARIO ---
 import requests
@@ -13,6 +14,7 @@ import json
 
 # 1. IDENTIDAD Y ESTILO (INTACTO)
 st.set_page_config(page_title="IO SECURITY", page_icon="logo.png", layout="wide")
+
 import streamlit.components.v1 as components
 
 # --- INYECCIÓN FORZADA DEL LOGO PARA CELULARES ---
@@ -25,7 +27,7 @@ components.html(
         if (appleIcon) { appleIcon.href = 'logo.png'; }
         const iconManifest = document.querySelector('link[rel="icon"]');
         if (iconManifest) { iconManifest.href = 'logo.png'; }
-
+        
         // Forzar actualización del DOM para PWA
         let link = document.createElement('link');
         link.rel = 'apple-touch-icon';
@@ -37,10 +39,12 @@ components.html(
     width=0,
 )
 # ------------------------------------------------
+
 st.markdown("""
     <head>
         <link rel="apple-touch-icon" href="logo.png?v=3">
         <link rel="shortcut icon" href="logo.png?v=3">
+        <link rel="manifest" href="manifest.json">
     </head>
     <style>
     .stApp { background-color: #0B0E14; color: #FFFFFF; font-family: 'Inter', sans-serif; }
@@ -111,7 +115,7 @@ def numero_a_letras(numero):
     return f"{letras.strip()} PESOS {decimal:02d}/100 M.N."
 
 
-# ---------------- MÓDULO: GENERADOR DE PDF PARA ANTICIPO (CON FIRMA DIGITAL) ----------------
+# ---------------- MÓDULOS DE GENERACIÓN DE PDF ----------------
 def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_desc, proy_ini, proy_plazo, proy_link, ant_fecha, ant_monto, ant_metodo, ant_ref, ant_total, ant_saldo, f_p_img):
     pdf = FPDF()
     pdf.add_page()
@@ -151,7 +155,6 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
             pdf.cell(125, 7, f" {detalle}", 1, 1, 'L')
         pdf.ln(6)
 
-    # 1. Detalles de la Empresa
     empresa_datos = [
         ("Nombre de la Empresa", "IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD"),
         ("Direccion", "Calle Alcatraz #206"),
@@ -160,7 +163,6 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Detalles de la Empresa", "", empresa_datos)
     
-    # 2. Información del Cliente
     cliente_datos = [
         ("Nombre del Cliente", cli_nom),
         ("Correo Electronico", cli_email),
@@ -169,7 +171,6 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Informacion del Cliente", "Este documento sirve como confirmacion de la recepcion de un pago de anticipo por parte de nuestro cliente:", cliente_datos)
     
-    # 3. Detalles del Proyecto
     proy_datos = [
         ("Nombre del Proyecto/Servicio", proy_nom),
         ("Descripcion Breve", proy_desc),
@@ -179,11 +180,9 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Detalles del Proyecto/Servicio", "El anticipo se aplica al siguiente proyecto o servicio acordado:", proy_datos)
     
-    # Prevención de corte de página
     if pdf.get_y() > 220:
         pdf.add_page()
         
-    # 4. Detalles del Anticipo
     ant_datos = [
         ("Fecha de Recepcion", ant_fecha),
         ("Monto del Anticipo", f"${ant_monto:,.2f} MXN"),
@@ -194,7 +193,6 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     ]
     dibujar_tabla("Detalles del Anticipo Recibido", "A continuacion, se detallan los datos del anticipo recibido:", ant_datos)
     
-    # 5. Declaración y Próximos Pasos 
     pdf.set_font('Arial', 'B', 11)
     pdf.cell(0, 8, "Declaracion y Proximos Pasos", 0, 1, 'L')
     pdf.set_font('Arial', '', 10)
@@ -202,7 +200,6 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     pdf.ln(2)
     pdf.multi_cell(0, 5, "Agradecemos su confianza en nuestra empresa. Si tiene alguna pregunta, no dude en contactarnos.")
     
-    # FIRMA PROFESIONAL CON RECUADRO DIGITAL APLICADO
     pdf.ln(12)
     pdf.set_font('Arial', '', 10)
     pdf.cell(0, 5, "Atentamente,", 0, 1, 'C')
@@ -215,13 +212,12 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
             img.save(t.name)
             return t.name
         p_img = g_t(f_p_img)
-        # Centrar firma (Ancho hoja 210, Ancho firma 40 -> X = 85)
         pdf.image(p_img, 85, y_firma, 40, 15)
         os.unlink(p_img)
         
     pdf.ln(18)
     pdf.set_x(65)
-    pdf.cell(80, 0, "", "T", 1, 'C') # Línea para firmar
+    pdf.cell(80, 0, "", "T", 1, 'C') 
     pdf.ln(2)
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 5, "Ing. Ivan Ortiz Perea", 0, 1, 'C')
@@ -231,10 +227,7 @@ def generar_pdf_anticipo(cli_nom, cli_email, cli_tel, cli_id, proy_nom, proy_des
     pdf.cell(0, 4, "IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD", 0, 1, 'C')
 
     return pdf.output(dest='S').encode('latin-1')
-# --------------------------------------------------------------------------------
 
-
-# 3. GENERADOR DE PDF COTIZACIÓN (INTACTO)
 def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo_pct, folio):
     pdf = FPDF()
     pdf.add_page()
@@ -371,8 +364,135 @@ def generar_pdf_cotizacion(cli, items, total_base, tel, email, iva_pct, anticipo
     
     return pdf.output(dest='S').encode('latin-1')
 
-# 3. GENERADOR DE PDF PARA CONTRATOS (INTACTO)
-def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas):
+def generar_pdf_nota(cli, items, total_base, tel, email, folio):
+    pdf = FPDF()
+    pdf.add_page()
+    hoy = datetime.now()
+    
+    pdf.set_fill_color(164, 25, 25) 
+    pdf.rect(10, 10, 50, 25, 'FD')
+    try: 
+        pdf.image('logo.png', 12, 12, 46, 21)
+    except: 
+        pass
+    
+    pdf.rect(60, 10, 80, 25, 'D')
+    pdf.set_xy(60, 12)
+    pdf.set_font('Arial', 'B', 16)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(80, 6, 'NOTA DE COMPROBANTE', 0, 1, 'C')
+    pdf.set_font('Arial', 'B', 9)
+    pdf.set_x(60)
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(80, 5, 'SIN VALOR FISCAL', 0, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    
+    pdf.set_y(24) 
+    pdf.set_x(60)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.multi_cell(80, 4, 'IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD', 0, 'C')
+    
+    y_actual = pdf.get_y()
+    pdf.set_xy(60, y_actual)
+    pdf.set_font('Arial', '', 7)
+    pdf.cell(80, 3, 'Tel: 7711648186 | info@iosecurity.com', 0, 1, 'C')
+
+    pdf.rect(140, 10, 60, 25, 'D')
+    pdf.set_xy(140, 12)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(30, 10, 'FOLIO', 1, 0, 'C')
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(30, 10, str(folio), 1, 1, 'C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(140, 22)
+    pdf.cell(30, 10, 'FECHA:', 1, 0, 'C')
+    pdf.cell(30, 10, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
+    
+    pdf.set_y(38)
+    
+    pdf.set_fill_color(164, 25, 25)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(190, 6, 'DATOS DEL CLIENTE', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'NOMBRE:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(75, 6, cli, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(10, 6, 'TEL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(30, 6, tel, 1, 0, 'L')
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'EMAIL:', 1, 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(45, 6, email, 1, 1, 'L')
+    
+    pdf.ln(2)
+    
+    pdf.set_fill_color(164, 25, 25)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
+    pdf.cell(115, 6, 'DESCRIPCION DE LOS ARTICULOS / SERVICIOS', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'PRECIO UNIT', 1, 0, 'C', True)
+    pdf.cell(30, 6, 'IMPORTE', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', '', 8)
+    min_rows = 18
+    for i in range(max(min_rows, len(items))):
+        if i < len(items):
+            it = items[i]
+            pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
+            pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
+            unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
+            pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'R')
+            pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'R')
+        else:
+            pdf.cell(15, 6, '', 1, 0, 'C')
+            pdf.cell(115, 6, '', 1, 0, 'L')
+            pdf.cell(30, 6, '', 1, 0, 'R')
+            pdf.cell(30, 6, '', 1, 1, 'R')
+            
+    pdf.ln(0) 
+    y_tot = pdf.get_y()
+    
+    pdf.rect(10, y_tot, 130, 12)
+    pdf.set_xy(12, y_tot + 2)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(126, 4, f'CANTIDAD CON LETRA: {numero_a_letras(total_base)}', 0, 1, 'L')
+
+    pdf.set_xy(140, y_tot)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(25, 12, 'TOTAL:', 1, 0, 'R')
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(35, 12, f"$ {total_base:,.2f}", 1, 1, 'R')
+    
+    pdf.set_y(y_tot + 14)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(40, 6, 'METODO DE PAGO:', 'L,T,B', 0, 'L')
+    pdf.set_font('Arial', '', 8)
+    pdf.cell(40, 6, '[   ] EFECTIVO', 'T,B', 0, 'C')
+    pdf.cell(40, 6, '[   ] TARJETA', 'T,B', 0, 'C')
+    pdf.cell(70, 6, '[   ] TRANSFERENCIA:', 'T,B,R', 1, 'L')
+    
+    pdf.ln(4)
+    pdf.set_fill_color(0, 0, 0)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font('Arial', 'B', 8)
+    pdf.cell(190, 6, 'AVISO LEGAL IMPORTANTE - LEYENDA DE PROTECCION', 1, 1, 'C', True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Arial', '', 7)
+    leyenda_proteccion = "Este documento es estrictamente una NOTA DE REMISION/COMPROBANTE DE PEDIDO emitida para el control interno y como constancia de la entrega de bienes o servicios detallados. ESTE DOCUMENTO CARECE DE VALIDEZ FISCAL. No es deducible de impuestos y no representa una factura electronica (CFDI). Al recibir este documento, el cliente acepta que las garantias de los productos se sujetaran a las politicas internas de IO SECURITY y que cualquier reclamacion debera acompañarse de este comprobante original."
+    pdf.multi_cell(190, 4, leyenda_proteccion, 1, 'J')
+    
+    return pdf.output(dest='S').encode('latin-1')
+
+# --- MODIFICADO: AÑADIDO diag_img PARA EL DIAGRAMA EN CONTRATOS ---
+def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c_img, f_p_img, f_ini, dom, notas, diag_img=None):
     pdf = FPDF()
     pdf.add_page()
     hoy = datetime.now()
@@ -548,146 +668,31 @@ def generar_pdf_io(cli, items, total, tipo, sub_m, periodo, tec, n_cam, can, f_c
         pdf.set_font('Arial', 'B', 7)
         pdf.cell(95, 4, '', 0, 0, 'C')
         pdf.cell(95, 4, f'({empresa_full})', 0, 1, 'C')
+
+    # --- NUEVO: SI HAY DIAGRAMA, SE AÑADE AL FINAL DEL CONTRATO ---
+    if diag_img is not None:
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'ANEXO: DISTRIBUCION ESTRATEGICA DE EQUIPOS', 0, 1, 'C')
+        pdf.ln(5)
+        
+        def g_t_diag(d):
+            img = Image.fromarray(d.astype('uint8'), 'RGBA')
+            t = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            img.save(t.name)
+            return t.name
+            
+        p_diag = g_t_diag(diag_img)
+        pdf.image(p_diag, 10, pdf.get_y(), 190)
+        os.unlink(p_diag)
+    # --------------------------------------------------------------
         
     return pdf.output(dest='S').encode('latin-1')
 
 
-# --- ACTUALIZADO: GENERADOR DE PDF PARA NOTA SIN VALOR FISCAL (ESTÉTICA CORREGIDA) ---
-def generar_pdf_nota(cli, items, total_base, tel, email, folio):
-    pdf = FPDF()
-    pdf.add_page()
-    hoy = datetime.now()
-    
-    pdf.set_fill_color(164, 25, 25) 
-    pdf.rect(10, 10, 50, 25, 'FD')
-    try: 
-        pdf.image('logo.png', 12, 12, 46, 21)
-    except: 
-        pass
-    
-    pdf.rect(60, 10, 80, 25, 'D')
-    pdf.set_xy(60, 12)
-    pdf.set_font('Arial', 'B', 16)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(80, 6, 'NOTA DE COMPROBANTE', 0, 1, 'C')
-    pdf.set_font('Arial', 'B', 9)
-    pdf.set_x(60)
-    pdf.set_text_color(255, 0, 0)
-    pdf.cell(80, 5, 'SIN VALOR FISCAL', 0, 1, 'C')
-    pdf.set_text_color(0, 0, 0)
-    
-    # --- CAMBIO AQUI: Uso multi_cell y aumento la letra ---
-    pdf.set_y(24) # Bajo un poco la coordenada vertical
-    pdf.set_x(60)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.multi_cell(80, 4, 'IO SECURITY CONSULTORIA INTEGRAL EN SISTEMAS DE SEGURIDAD', 0, 'C')
-    
-    # Bajo otro poco para el teléfono
-    y_actual = pdf.get_y()
-    pdf.set_xy(60, y_actual)
-    pdf.set_font('Arial', '', 7)
-    pdf.cell(80, 3, 'Tel: 7711648186 | info@iosecurity.com', 0, 1, 'C')
-    # --------------------------------------------------------
-
-    pdf.rect(140, 10, 60, 25, 'D')
-    pdf.set_xy(140, 12)
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(30, 10, 'FOLIO', 1, 0, 'C')
-    pdf.set_text_color(255, 0, 0)
-    pdf.cell(30, 10, str(folio), 1, 1, 'C')
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_xy(140, 22)
-    pdf.cell(30, 10, 'FECHA:', 1, 0, 'C')
-    pdf.cell(30, 10, f"{hoy.day}/{hoy.month}/{hoy.year}", 1, 1, 'C')
-    
-    pdf.set_y(38)
-    
-    pdf.set_fill_color(164, 25, 25)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(190, 6, 'DATOS DEL CLIENTE', 1, 1, 'C', True)
-    
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(15, 6, 'NOMBRE:', 1, 0, 'L')
-    pdf.set_font('Arial', '', 8)
-    pdf.cell(75, 6, cli, 1, 0, 'L')
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(10, 6, 'TEL:', 1, 0, 'L')
-    pdf.set_font('Arial', '', 8)
-    pdf.cell(30, 6, tel, 1, 0, 'L')
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(15, 6, 'EMAIL:', 1, 0, 'L')
-    pdf.set_font('Arial', '', 8)
-    pdf.cell(45, 6, email, 1, 1, 'L')
-    
-    pdf.ln(2)
-    
-    pdf.set_fill_color(164, 25, 25)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(15, 6, 'CANT', 1, 0, 'C', True)
-    pdf.cell(115, 6, 'DESCRIPCION DE LOS ARTICULOS / SERVICIOS', 1, 0, 'C', True)
-    pdf.cell(30, 6, 'PRECIO UNIT', 1, 0, 'C', True)
-    pdf.cell(30, 6, 'IMPORTE', 1, 1, 'C', True)
-    
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', '', 8)
-    min_rows = 18
-    for i in range(max(min_rows, len(items))):
-        if i < len(items):
-            it = items[i]
-            pdf.cell(15, 6, str(it['Cantidad']), 1, 0, 'C')
-            pdf.cell(115, 6, it['Concepto'], 1, 0, 'L')
-            unit = it['Subtotal_Final'] / it['Cantidad'] if it['Cantidad'] > 0 else 0
-            pdf.cell(30, 6, f"$ {unit:,.2f}", 1, 0, 'R')
-            pdf.cell(30, 6, f"$ {it['Subtotal_Final']:,.2f}", 1, 1, 'R')
-        else:
-            pdf.cell(15, 6, '', 1, 0, 'C')
-            pdf.cell(115, 6, '', 1, 0, 'L')
-            pdf.cell(30, 6, '', 1, 0, 'R')
-            pdf.cell(30, 6, '', 1, 1, 'R')
-            
-    pdf.ln(0) 
-    y_tot = pdf.get_y()
-    
-    pdf.rect(10, y_tot, 130, 12)
-    pdf.set_xy(12, y_tot + 2)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(126, 4, f'CANTIDAD CON LETRA: {numero_a_letras(total_base)}', 0, 1, 'L')
-
-    pdf.set_xy(140, y_tot)
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(25, 12, 'TOTAL:', 1, 0, 'R')
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(35, 12, f"$ {total_base:,.2f}", 1, 1, 'R')
-    
-    pdf.set_y(y_tot + 14)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(40, 6, 'METODO DE PAGO:', 'L,T,B', 0, 'L')
-    pdf.set_font('Arial', '', 8)
-    pdf.cell(40, 6, '[   ] EFECTIVO', 'T,B', 0, 'C')
-    pdf.cell(40, 6, '[   ] TARJETA', 'T,B', 0, 'C')
-    pdf.cell(70, 6, '[   ] TRANSFERENCIA:', 'T,B,R', 1, 'L')
-    
-    pdf.ln(4)
-    pdf.set_fill_color(0, 0, 0)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font('Arial', 'B', 8)
-    pdf.cell(190, 6, 'AVISO LEGAL IMPORTANTE - LEYENDA DE PROTECCION', 1, 1, 'C', True)
-    
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', '', 7)
-    leyenda_proteccion = "Este documento es estrictamente una NOTA DE REMISION/COMPROBANTE DE PEDIDO emitida para el control interno y como constancia de la entrega de bienes o servicios detallados. ESTE DOCUMENTO CARECE DE VALIDEZ FISCAL. No es deducible de impuestos y no representa una factura electronica (CFDI). Al recibir este documento, el cliente acepta que las garantias de los productos se sujetaran a las politicas internas de IO SECURITY y que cualquier reclamacion debera acompañarse de este comprobante original."
-    pdf.multi_cell(190, 4, leyenda_proteccion, 1, 'J')
-    
-    return pdf.output(dest='S').encode('latin-1')
-# --------------------------------------------------------------
-
-
 # --- FUNCIÓN PARA AGENDAR EN CALENDARIO ---
 def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
-    url_script = "https://script.google.com/macros/s/AKfycby3FZMuNjBkHu9u5fybu7RWoIb7oGmhuKQk23hRujW3bZ_r07l4UZ75ZWb3ZRgzbiAr/exec" 
+    url_script = "TU_URL_DE_GOOGLE_SCRIPT_AQUI" 
     
     dt_inicio = datetime.combine(fecha, hora_elegida)
     dt_fin = dt_inicio + timedelta(hours=2)
@@ -710,10 +715,9 @@ def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
 # 4. INTERFAZ OPERATIVA Y PRORRATEO
 st.sidebar.title("🛡️ CONTROL IO")
 
-# --- CAMBIO AQUÍ: Agregué "Nota sin Valor Fiscal" al menú ---
-tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita", "Nota sin Valor Fiscal"])
+# --- MENÚ ACTUALIZADO ---
+tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita", "Nota sin Valor Fiscal", "Generador de Diagramas"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
-
 
 # --- MÓDULO: CREAR CITA ---
 if tipo == "Crear Cita":
@@ -736,8 +740,49 @@ if tipo == "Crear Cita":
             else:
                 st.error("⚠️ REQUERIDO: Nombre del cliente.")
 
+# --- NUEVO MÓDULO INDEPENDIENTE: GENERADOR DE DIAGRAMAS ---
+elif tipo == "Generador de Diagramas":
+    st.markdown("## 🗺️ GENERADOR DE DIAGRAMAS DE CONEXIÓN")
+    st.info("Sube el plano o foto del sitio para bosquejar la ubicación de los dispositivos.")
+    
+    col_d1, col_d2 = st.columns([1, 4])
+    with col_d1:
+        plano_upload = st.file_uploader("📂 Subir Plano/Foto", type=["png", "jpg", "jpeg"])
+        color_trazo = st.color_picker("Color de Equipo", "#FF0000")
+        ancho_trazo = st.slider("Grosor Marca", 1, 30, 15)
+        modo_herramienta = st.selectbox("Herramienta:", ["circle", "rect", "freedraw", "transform"])
+        
+    with col_d2:
+        bg_image = None
+        if plano_upload:
+            bg_image = Image.open(plano_upload)
+            if bg_image.width > 800:
+                h_new = int(bg_image.height * (800 / bg_image.width))
+                bg_image = bg_image.resize((800, h_new))
+        
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 0, 0, 0.3)", stroke_width=ancho_trazo, stroke_color=color_trazo,
+            background_image=bg_image, height=600, width=800, drawing_mode=modo_herramienta,
+            key="diag_sketch", display_toolbar=True,
+        )
+
+    if st.button("🚀 FINALIZAR Y GUARDAR DIAGRAMA"):
+        if canvas_result.image_data is not None:
+            drawing_img = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
+            if bg_image:
+                bg_image = bg_image.convert("RGBA")
+                if drawing_img.size != bg_image.size: drawing_img = drawing_img.resize(bg_image.size)
+                final_diag = Image.alpha_composite(bg_image, drawing_img)
+            else: final_diag = drawing_img
+            temp_diag = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            final_diag.save(temp_diag.name)
+            
+            with open(temp_diag.name, "rb") as file_diag:
+                st.download_button(label="📥 DESCARGAR DIAGRAMA FINAL (PNG)", data=file_diag, file_name="Diagrama_Conexion_IO_SECURITY.png", mime="image/png")
+            os.unlink(temp_diag.name)
+
 # --- TU CÓDIGO ORIGINAL INTACTO ---
-elif tipo != "Crear Cita":
+elif tipo != "Crear Cita" and tipo != "Generador de Diagramas":
     with st.container():
         c1, c2 = st.columns(2)
         with c1:
@@ -903,17 +948,54 @@ elif tipo != "Crear Cita":
                 st.error("⚠️ REQUERIDO: Nombre del Cliente, Nombre del Proyecto y tu Firma Digital.")
 
     elif tipo in ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento"]:
-        st.markdown("### ✍️ FIRMAS DIGITALES")
+        st.markdown("### ✍️ FIRMAS Y ANEXOS")
         f1, f2 = st.columns(2)
         with f1: 
             c_cli = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="cli", display_toolbar=True)
         with f2: 
             c_prov = st_canvas(stroke_width=3, stroke_color="#000", background_color="#FFFFFF", height=180, width=350, key="prov", display_toolbar=True)
 
+        # --- NUEVO: OPCIÓN PARA AGREGAR DIAGRAMA AL CONTRATO ---
+        st.markdown("### 🗺️ ANEXO DE DISTRIBUCIÓN (Opcional)")
+        incluir_diag = st.checkbox("Agregar Diagrama de Distribución al Contrato")
+        diag_array = None
+        
+        if incluir_diag:
+            st.info("Sube el plano o foto y dibuja las ubicaciones de los equipos.")
+            col_dc1, col_dc2 = st.columns([1, 4])
+            with col_dc1:
+                up_c = st.file_uploader("📂 Subir Plano", type=["png", "jpg", "jpeg"], key="up_c")
+                color_c = st.color_picker("Color de Equipo", "#FF0000", key="col_c")
+                ancho_c = st.slider("Grosor Marca", 1, 30, 15, key="gro_c")
+                modo_c = st.selectbox("Herramienta:", ["circle", "rect", "freedraw"], key="mod_c")
+                
+            with col_dc2:
+                bg_c = None
+                if up_c:
+                    bg_c = Image.open(up_c)
+                    if bg_c.width > 800:
+                        bg_c = bg_c.resize((800, int(bg_c.height * (800 / bg_c.width))))
+                
+                can_c = st_canvas(
+                    fill_color="rgba(255, 0, 0, 0.3)", stroke_width=ancho_c, stroke_color=color_c,
+                    background_image=bg_c, height=600, width=800, drawing_mode=modo_c,
+                    key="can_c", display_toolbar=True,
+                )
+                
+                if can_c.image_data is not None:
+                    draw_c = Image.fromarray(can_c.image_data.astype('uint8'), 'RGBA')
+                    if bg_c:
+                        bg_c = bg_c.convert("RGBA")
+                        if draw_c.size != bg_c.size: draw_c = draw_c.resize(bg_c.size)
+                        fin_c = Image.alpha_composite(bg_c, draw_c)
+                    else: fin_c = draw_c
+                    diag_array = np.array(fin_c)
+        # -------------------------------------------------------
+
         if st.button("🚀 FINALIZAR Y GENERAR EXPEDIENTE"):
             if c_cli.image_data is not None and nom and dom_input:
                 try:
-                    pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, sub_m, periodo_io, tec_io, n_cam_io, can_io, c_cli.image_data, c_prov.image_data, f_p, dom_input, notas_input)
+                    pdf_b = generar_pdf_io(nom, items_pdf, total_final, tipo, sub_m, periodo_io, tec_io, n_cam_io, can_io, c_cli.image_data, c_prov.image_data, f_p, dom_input, notas_input, diag_array)
                     st.markdown(f"<div class='success-box'>🔒 SISTEMA: CONTRATO DE {tipo.upper()} GENERADO CON ÉXITO.</div>", unsafe_allow_html=True)
                     st.markdown(f'<a href="data:application/octet-stream;base64,{base64.b64encode(pdf_b).decode()}" download="Contrato_{nom}.pdf" class="download-btn">1. 📥 DESCARGAR CONTRATO</a>', unsafe_allow_html=True)
                     msg = urllib.parse.quote(f"Hola {nom}, soy Ivan de IO SECURITY. Confirmo la generacion de su contrato. Adjunto PDF.")
