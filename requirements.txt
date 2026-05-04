@@ -1,6 +1,7 @@
 streamlit==1.35.0
 st-gsheets-connection
-streamlit-drawable-canvas
+streamlit-drawable-canvas==0.9.3
 fpdf
 pandas
 Pillow
+requests
