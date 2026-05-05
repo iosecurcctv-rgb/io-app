@@ -716,7 +716,7 @@ def agendar_recordatorio(tipo_evento, cliente, fecha, hora_elegida):
 st.sidebar.title("🛡️ CONTROL IO")
 
 # --- MENÚ ACTUALIZADO ---
-tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita", "Nota sin Valor Fiscal", "Generador de Diagramas"])
+tipo = st.sidebar.radio("Módulo:", ["Nueva Instalación CCTV", "Servicio IO Prevent", "Mantenimiento", "Cotización", "Anticipo", "Crear Cita", "Alertas Mantenimiento", "Nota sin Valor Fiscal", "Generador de Diagramas"])
 sub_m = st.sidebar.selectbox("Subtipo Mant.:", ["Preventivo", "Correctivo"]) if tipo == "Mantenimiento" else ""
 
 # --- MÓDULO: CREAR CITA ---
@@ -739,6 +739,52 @@ if tipo == "Crear Cita":
                 st.markdown(f"<div class='success-box'>✅ SISTEMA: CITA AGENDADA EN CALENDARIO CON ÉXITO.</div>", unsafe_allow_html=True)
             else:
                 st.error("⚠️ REQUERIDO: Nombre del cliente.")
+
+# --- NUEVO MÓDULO: ALERTAS DE MANTENIMIENTO PREVENTIVO ---
+elif tipo == "Alertas Mantenimiento":
+    st.markdown("## 🔔 PROGRAMACIÓN DE MANTENIMIENTO PREVENTIVO")
+    st.info("Genera recordatorios automáticos a futuro para contactar a tus clientes sobre sus mantenimientos.")
+    
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        nom_cliente_mant = st.text_input("👤 NOMBRE DEL CLIENTE")
+        sistema_mant = st.selectbox("🛡️ SISTEMA A MANTENER", [
+            "Limpieza de Cámaras y DVR", 
+            "Revisión de Baterías Cerca Eléctrica", 
+            "Mantenimiento Control de Acceso", 
+            "Revisión General IO Prevent"
+        ])
+    
+    with col_m2:
+        ciclo_mant = st.selectbox("🔄 CICLO DE MANTENIMIENTO", ["3 Meses", "6 Meses", "1 Año"])
+        fecha_instalacion = st.date_input("📅 FECHA DE ÚLTIMO SERVICIO / INSTALACIÓN")
+        
+        # Calcular fecha futura
+        if ciclo_mant == "3 Meses":
+            dias_sumar = 90
+        elif ciclo_mant == "6 Meses":
+            dias_sumar = 180
+        else:
+            dias_sumar = 365
+            
+        proxima_fecha = fecha_instalacion + timedelta(days=dias_sumar)
+        st.success(f"📌 Próximo servicio programado para: **{proxima_fecha.strftime('%d/%m/%Y')}**")
+
+    if st.button("🚀 AGENDAR ALERTA EN CALENDARIO"):
+        if nom_cliente_mant:
+            # Reutilizamos tu función de Google Calendar
+            titulo_evento = f"MANTENIMIENTO TOCA HOY: {sistema_mant}"
+            hora_default = time(9, 0) # Agendar a las 9 AM
+            agendar_recordatorio(titulo_evento, nom_cliente_mant, proxima_fecha, hora_default)
+            
+            st.markdown(f"<div class='success-box'>✅ SISTEMA: ALERTA PREVENTIVA CREADA PARA EL {proxima_fecha.strftime('%d/%m/%Y')}.</div>", unsafe_allow_html=True)
+            
+            # Opción para avisarle al cliente desde hoy que su sistema quedó registrado
+            msg_preventivo = urllib.parse.quote(f"Hola {nom_cliente_mant}, en IO SECURITY hemos registrado su sistema en nuestra bitácora. Nos comunicaremos con usted el {proxima_fecha.strftime('%d/%m/%Y')} para su próximo mantenimiento preventivo sugerido. ¡Excelente día!")
+            st.markdown(f'<a href="https://wa.me/?text={msg_preventivo}" target="_blank" class="whatsapp-btn">💬 ENVIAR AVISO DE REGISTRO POR WHATSAPP</a>', unsafe_allow_html=True)
+        else:
+            st.error("⚠️ REQUERIDO: Nombre del cliente.")
+# ---------------------------------------------------------
 
 # --- NUEVO MÓDULO INDEPENDIENTE: GENERADOR DE DIAGRAMAS ---
 elif tipo == "Generador de Diagramas":
